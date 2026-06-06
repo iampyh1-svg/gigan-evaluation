@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기간제교원 근무평가 - 전주기전여자고등학교</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #1a5276;
+    --primary-light: #2980b9;
+    --accent: #e74c3c;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --border: #d5e1ed;
+    --text: #2c3e50;
+    --muted: #7f8c8d;
+    --success: #27ae60;
+    --warning: #f39c12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .header .sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .user-badge {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 13px;
+  }
+  .btn-logout {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .container { max-width: 700px; margin: 0 auto; padding: 30px 16px; }
+  .container-wide { max-width: 1000px; margin: 0 auto; padding: 30px 16px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 32px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 20px;
+    color: var(--primary);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .card .desc { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  /* Login */
+  .login-wrap {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+  .login-logo {
+    width: 72px;
+    height: 72px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+  }
+  .login-card h2 { font-size: 22px; color: var(--primary); margin-bottom: 4px; }
+  .login-card .school { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+  .login-card .year { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; text-align: left; }
+  input[type="text"], input[type="password"], select {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    color: var(--text);
+  }
+  input:focus, select:focus { border-color: var(--primary-light); }
+
+  .btn {
+    display: inline-block;
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #154360; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-secondary:hover { background: #e8eef5; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #1e8449; }
+  .btn-full { width: 100%; display: block; text-align: center; }
+
+  .form-group { margin-bottom: 20px; }
+
+  /* Teacher list */
+  .teacher-list { display: flex; flex-direction: column; gap: 10px; }
+  .teacher-item {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .teacher-item:hover { border-color: var(--primary-light); background: #f0f7ff; }
+  .teacher-item .name { font-size: 16px; font-weight: 600; }
+  .teacher-item .subject { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .teacher-item .eval-status {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .status-done { background: #d5f5e3; color: #1e8449; }
+  .status-pending { background: #fef9e7; color: #d68910; }
+
+  /* Score section */
+  .score-section { margin-bottom: 24px; }
+  .score-section .item-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+  .item-num {
+    width: 28px;
+    height: 28px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .item-name { font-size: 15px; font-weight: 600; }
+  .item-max { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .score-btn {
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    background: white;
+    font-family: inherit;
+  }
+  .score-btn:hover { border-color: var(--primary-light); background: #f0f7ff; }
+  .score-btn.selected { border-color: var(--primary); background: var(--primary); color: white; }
+  .score-btn .grade { font-size: 11px; font-weight: 700; }
+  .score-btn .range { font-size: 10px; opacity: 0.8; margin-top: 1px; }
+  .score-btn .points { font-size: 9px; opacity: 0.7; }
+  .score-btn.selected .grade,
+  .score-btn.selected .range,
+  .score-btn.selected .points { opacity: 1; }
+
+  .grade-매우우수 { --grade-color: #1a5276; }
+  .grade-우수 { --grade-color: #27ae60; }
+  .grade-보통 { --grade-color: #d68910; }
+  .grade-미흡 { --grade-color: #e67e22; }
+  .grade-매우미흡 { --grade-color: #c0392b; }
+
+  .score-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .score-input-row input[type="number"] {
+    width: 80px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    font-family: inherit;
+    outline: none;
+  }
+  .score-input-row input:focus { border-color: var(--primary); }
+  .score-label { font-size: 13px; color: var(--muted); }
+  .score-grade-display {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  .total-bar {
+    background: linear-gradient(135deg, #1a5276, #2980b9);
+    color: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .total-bar .label { font-size: 15px; opacity: 0.9; }
+  .total-bar .score { font-size: 36px; font-weight: 700; }
+  .total-bar .out-of { font-size: 16px; opacity: 0.7; }
+  .total-bar .grade { font-size: 14px; background: rgba(255,255,255,0.2); padding: 4px 14px; border-radius: 20px; }
+
+  /* Admin */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1.5px solid var(--border);
+    text-align: center;
+  }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
+  .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid #edf2f7; text-align: center; }
+  tr:hover td { background: #f8fbff; }
+  tr:last-child td { border-bottom: none; }
+  .td-name { text-align: left; font-weight: 600; }
+  .td-avg { font-weight: 700; color: var(--primary); }
+
+  .grade-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .gb-매우우수 { background: #d6eaf8; color: #1a5276; }
+  .gb-우수 { background: #d5f5e3; color: #1e8449; }
+  .gb-보통 { background: #fef9e7; color: #9a7d0a; }
+  .gb-미흡 { background: #fdebd0; color: #d35400; }
+  .gb-매우미흡 { background: #fadbd8; color: #c0392b; }
+
+  .tab-bar { display: flex; gap: 0; margin-bottom: 20px; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border); }
+  .tab-btn {
+    flex: 1;
+    padding: 11px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--primary); color: white; font-weight: 700; }
+  .tab-btn:not(:last-child) { border-right: 1.5px solid var(--border); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .alert-info { background: #d6eaf8; color: #1a5276; border-left: 4px solid var(--primary); }
+  .alert-success { background: #d5f5e3; color: #1e8449; border-left: 4px solid var(--success); }
+  .alert-error { background: #fadbd8; color: #c0392b; border-left: 4px solid var(--accent); }
+
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .action-bar .spacer { flex: 1; }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row select { flex: 1; min-width: 140px; font-size: 13px; padding: 8px 10px; }
+
+  @media (max-width: 600px) {
+    .card { padding: 20px; }
+    .login-card { padding: 32px 24px; }
+    .score-grid { grid-template-columns: repeat(5, 1fr); }
+    .score-btn .grade { font-size: 10px; }
+    th, td { padding: 7px 8px; font-size: 12px; }
+  }
+
+  .scroll-x { overflow-x: auto; }
+
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .teacher-mgmt { margin-top: 8px; }
+  .teacher-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .teacher-row input { flex: 1; font-size: 13px; padding: 8px 10px; }
+  .teacher-row .sub-input { width: 120px; }
+  .btn-icon { padding: 8px 10px; font-size: 14px; border-radius: 6px; border: 1.5px solid var(--border); background: white; cursor: pointer; }
+  .btn-icon:hover { background: #fadbd8; border-color: var(--accent); }
+
+  .progress-bar-wrap { background: #e9ecef; border-radius: 10px; height: 8px; margin-top: 4px; }
+  .progress-bar { height: 8px; border-radius: 10px; background: var(--primary); transition: width 0.3s; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header" id="mainHeader" style="display:none">
+  <div>
+    <div class="h1" style="font-size:17px;font-weight:700">기간제교원 근무평가</div>
+    <div class="sub" style="font-size:12px;opacity:.8">전주기전여자고등학교</div>
+  </div>
+  <div class="header-right">
+    <div class="user-badge" id="headerUser"></div>
+    <button class="btn-logout" onclick="openChangePwModal()" id="changePwBtn" style="display:none">🔑 비밀번호 변경</button>
+    <button class="btn-logout" onclick="logout()">로그아웃</button>
+    <button class="btn-logout" onclick="goAdmin()" id="adminBtn" style="display:none">관리자</button>
+  </div>
+</div>
+
+<!-- MODAL: 비밀번호 변경 -->
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;display:none;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.18);margin:16px">
+    <div style="font-size:18px;font-weight:700;color:var(--primary);margin-bottom:6px">비밀번호 변경</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px" id="modalUserName"></div>
+    <div class="form-group">
+      <label>현재 비밀번호</label>
+      <input type="password" id="modalCurPw" placeholder="현재 비밀번호" onkeydown="if(event.key==='Enter')document.getElementById('modalNewPw1').focus()">
+    </div>
+    <div class="form-group">
+      <label>새 비밀번호</label>
+      <input type="password" id="modalNewPw1" placeholder="새 비밀번호" onkeydown="if(event.key==='Enter')document.getElementById('modalNewPw2').focus()">
+    </div>
+    <div class="form-group">
+      <label>새 비밀번호 확인</label>
+      <input type="password" id="modalNewPw2" placeholder="새 비밀번호 다시 입력" onkeydown="if(event.key==='Enter')submitChangePw()">
+    </div>
+    <div id="modalPwError" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeChangePwModal()">취소</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitChangePw()">변경</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: LOGIN -->
+<div class="page active" id="pageLogin">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">🏫</div>
+      <h2>근무평가 시스템</h2>
+      <div class="school">전주기전여자고등학교<br>기간제교원 근무평가</div>
+
+      <div id="loginTabs" class="tab-bar" style="margin-bottom:24px">
+        <button class="tab-btn active" onclick="switchLoginTab('evaluator')">인사위원 로그인</button>
+        <button class="tab-btn" onclick="switchLoginTab('admin')">관리자</button>
+      </div>
+
+      <div id="loginEvaluator">
+        <div class="form-group">
+          <label>이름 선택</label>
+          <select id="loginName" onchange="document.getElementById('loginPw').focus()">
+            <option value="">-- 이름을 선택하세요 --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div id="loginError" class="alert alert-error" style="display:none"></div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">평가 시작</button>
+      </div>
+
+      <div id="loginAdmin" style="display:none">
+        <div class="form-group">
+          <label>관리자 비밀번호</label>
+          <input type="password" id="adminPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doAdminLogin()">
+        </div>
+        <div id="adminLoginError" class="alert alert-error" style="display:none"></div>
+        <button class="btn btn-primary btn-full" onclick="doAdminLogin()">관리자 로그인</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);margin-top:20px">2026학년도 기간제교원 근무평가</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: SELECT TEACHER -->
+<div class="page" id="pageSelectTeacher">
+  <div class="container">
+    <div class="card">
+      <h2>평가 대상 선택</h2>
+      <div class="desc" id="selectDesc">평가할 기간제 교사를 선택하세요.</div>
+      <div class="teacher-list" id="teacherList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: EVALUATE -->
+<div class="page" id="pageEvaluate">
+  <div class="container">
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:13px;color:var(--muted)">평가 대상</div>
+          <div style="font-size:20px;font-weight:700;color:var(--primary)" id="evalTeacherName"></div>
+        </div>
+        <button class="btn btn-secondary" onclick="goSelectTeacher()">← 목록으로</button>
+      </div>
+    </div>
+
+    <div class="total-bar">
+      <div>
+        <div class="label">총점</div>
+        <div style="font-size:12px;opacity:.7;margin-top:2px">5개 항목 × 최대 20점</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="grade" id="totalGrade">-</div>
+        <div>
+          <span class="score" id="totalScore">0</span>
+          <span class="out-of"> / 100</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="evalForm"></div>
+
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-secondary" style="flex:1" onclick="goSelectTeacher()">취소</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitEval()">평가 제출</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: COMPLETE -->
+<div class="page" id="pageComplete">
+  <div class="container">
+    <div class="card" style="text-align:center;padding:48px 32px">
+      <div style="font-size:56px;margin-bottom:16px">✅</div>
+      <h2 style="margin-bottom:8px">평가 완료</h2>
+      <div style="color:var(--muted);margin-bottom:8px;font-size:14px" id="completeTeacher"></div>
+      <div style="font-size:32px;font-weight:700;color:var(--primary);margin:16px 0" id="completeScore"></div>
+      <div id="completeGrade" style="margin-bottom:24px"></div>
+      <button class="btn btn-primary" onclick="goSelectTeacher()">다른 교사 평가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: ADMIN -->
+<div class="page" id="pageAdmin">
+  <div class="container-wide">
+    <div class="tab-bar" style="margin-bottom:20px">
+      <button class="tab-btn active" onclick="switchAdminTab('summary')" id="tabSummary">전체 집계</button>
+      <button class="tab-btn" onclick="switchAdminTab('detail')" id="tabDetail">상세 내역</button>
+      <button class="tab-btn" onclick="switchAdminTab('teachers')" id="tabTeachers">기간제 교사 관리</button>
+      <button class="tab-btn" onclick="switchAdminTab('evaluators')" id="tabEvaluators">인사위원 관리</button>
+      <button class="tab-btn" onclick="switchAdminTab('settings')" id="tabSettings">설정</button>
+    </div>
+
+    <!-- Summary Tab -->
+    <div class="tab-content active" id="adminSummary">
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <div class="card">
+        <div class="action-bar">
+          <h2 style="font-size:17px;margin:0">교사별 평가 집계</h2>
+          <div class="spacer"></div>
+          <button class="btn btn-success" onclick="exportExcel()">📥 엑셀 내보내기</button>
+        </div>
+        <div class="scroll-x" id="summaryTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- Detail Tab -->
+    <div class="tab-content" id="adminDetail">
+      <div class="card">
+        <div class="action-bar">
+          <h2 style="font-size:17px;margin:0">개별 평가 내역</h2>
+          <div class="spacer"></div>
+          <button class="btn btn-success" onclick="exportExcelDetail()">📥 상세 엑셀</button>
+        </div>
+        <div class="filter-row">
+          <select id="filterTeacher" onchange="renderDetailTable()">
+            <option value="">전체 교사</option>
+          </select>
+          <select id="filterEvaluator" onchange="renderDetailTable()">
+            <option value="">전체 평가위원</option>
+          </select>
+        </div>
+        <div class="scroll-x" id="detailTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- Teachers Tab -->
+    <div class="tab-content" id="adminTeachers">
+      <div class="card">
+        <h2>기간제 교사 목록 관리</h2>
+        <div class="desc">평가 대상 교사를 추가하거나 삭제할 수 있습니다.</div>
+        <div id="teacherMgmtList" class="teacher-mgmt"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
+          <input type="text" id="newTeacherSubject" placeholder="담당과목 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
+          <button class="btn btn-primary" onclick="addTeacher()" style="white-space:nowrap">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evaluators Tab -->
+    <div class="tab-content" id="adminEvaluators">
+      <div class="tab-bar" style="margin-bottom:16px" id="evSubTabBar">
+        <button class="tab-btn active" onclick="switchEvTab('list')" id="evTabList">명단 관리</button>
+        <button class="tab-btn" onclick="switchEvTab('pw')" id="evTabPw">비밀번호 설정</button>
+      </div>
+
+      <!-- 명단 관리 -->
+      <div id="evTabContentList">
+        <div class="card">
+          <h2>인사위원 명단 관리</h2>
+          <div class="desc">평가에 참여하는 인사위원을 등록하세요. 새로 추가된 위원의 초기 비밀번호는 <strong>kijun1234!</strong> 입니다.</div>
+          <div id="evaluatorMgmtList" class="teacher-mgmt"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input type="text" id="newEvaluatorName" placeholder="인사위원 이름" style="flex:1;font-size:13px;padding:8px 10px" onkeydown="if(event.key==='Enter')addEvaluator()">
+            <input type="text" id="newEvaluatorRole" placeholder="직위 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
+            <button class="btn btn-primary" onclick="addEvaluator()" style="white-space:nowrap">추가</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 비밀번호 설정 -->
+      <div id="evTabContentPw" style="display:none">
+        <div class="card">
+          <h2>인사위원 비밀번호 설정</h2>
+          <div class="desc">인사위원별 비밀번호를 초기화하거나 변경할 수 있습니다. 초기 비밀번호: <strong>kijun1234!</strong></div>
+          <div id="evaluatorPwList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="adminSettings">
+      <div class="card">
+        <h2>시스템 설정</h2>
+        <div class="form-group" style="margin-top:20px">
+          <label>관리자 비밀번호 변경</label>
+          <input type="password" id="newPw1" placeholder="새 비밀번호" style="margin-bottom:8px">
+          <input type="password" id="newPw2" placeholder="새 비밀번호 확인">
+        </div>
+        <button class="btn btn-primary" onclick="changePw()">비밀번호 변경</button>
+        <div id="pwMsg" class="alert" style="display:none;margin-top:12px"></div>
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>평가 연도</label>
+          <input type="text" id="evalYear" placeholder="예: 2025">
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">저장</button>
+        <div class="divider"></div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--accent)">데이터 초기화</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px">평가 데이터를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.</div>
+          <button class="btn" style="background:var(--accent);color:white" onclick="clearAllData()">전체 평가 데이터 초기화</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const CRITERIA = [
+  '교육자로서의 품성',
+  '교육연구 및 담당업무',
+  '학습지도',
+  '생활지도',
+  '직원간의 화합'
+];
+
+const GRADES = [
+  { label: '매우우수', min: 17, max: 20 },
+  { label: '우수',     min: 13, max: 16 },
+  { label: '보통',     min: 9,  max: 12 },
+  { label: '미흡',     min: 5,  max: 8  },
+  { label: '매우미흡', min: 1,  max: 4  },
+];
+
+function getGrade(score) {
+  if (!score || score < 1) return '-';
+  for (const g of GRADES) {
+    if (score >= g.min && score <= g.max) return g.label;
+  }
+  return '-';
+}
+
+function getTotalGrade(total) {
+  if (total >= 85) return '매우우수';
+  if (total >= 65) return '우수';
+  if (total >= 45) return '보통';
+  if (total >= 25) return '미흡';
+  if (total >= 5)  return '매우미흡';
+  return '-';
+}
+
+function loadData() {
+  return {
+    teachers: JSON.parse(localStorage.getItem('kj_teachers') || '[]'),
+    evaluators: JSON.parse(localStorage.getItem('kj_evaluators') || '[]'),
+    evals: JSON.parse(localStorage.getItem('kj_evals') || '[]'),
+    adminPw: localStorage.getItem('kj_adminpw') || 'admin1234',
+    evalYear: localStorage.getItem('kj_year') || '2026',
+  };
+}
+
+function saveTeachers(list) { localStorage.setItem('kj_teachers', JSON.stringify(list)); }
+function saveEvaluators(list) { localStorage.setItem('kj_evaluators', JSON.stringify(list)); }
+function saveEvals(list) { localStorage.setItem('kj_evals', JSON.stringify(list)); }
+
+window.addEventListener('DOMContentLoaded', populateLoginSelect);
+
+// Init default teachers
+if (!localStorage.getItem('kj_teachers')) {
+  const defaults = [
+    { id: 1, name: '김○○', subject: '국어' },
+    { id: 2, name: '이○○', subject: '영어' },
+    { id: 3, name: '박○○', subject: '수학' },
+  ];
+  saveTeachers(defaults);
+}
+
+// ==================== STATE ====================
+let currentUser = null;
+let isAdmin = false;
+let currentTeacher = null;
+let scores = [0, 0, 0, 0, 0];
+let currentAdminTab = 'summary';
+let currentLoginTab = 'evaluator';
+
+// ==================== ROUTING ====================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const isLoginPage = id === 'pageLogin';
+  document.getElementById('mainHeader').style.display = isLoginPage ? 'none' : 'flex';
+}
+
+function logout() {
+  currentUser = null;
+  isAdmin = false;
+  showPage('pageLogin');
+  populateLoginSelect();
+  document.getElementById('loginPw').value = '';
+  document.getElementById('adminPw').value = '';
+  document.getElementById('changePwBtn').style.display = 'none';
+}
+
+// ==================== 비밀번호 변경 모달 ====================
+function openChangePwModal() {
+  document.getElementById('modalUserName').textContent = currentUser + ' 위원';
+  document.getElementById('modalCurPw').value = '';
+  document.getElementById('modalNewPw1').value = '';
+  document.getElementById('modalNewPw2').value = '';
+  document.getElementById('modalPwError').style.display = 'none';
+  const overlay = document.getElementById('modalOverlay');
+  overlay.style.display = 'flex';
+  setTimeout(() => document.getElementById('modalCurPw').focus(), 50);
+}
+
+function closeChangePwModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function submitChangePw() {
+  const curPw = document.getElementById('modalCurPw').value;
+  const newPw1 = document.getElementById('modalNewPw1').value;
+  const newPw2 = document.getElementById('modalNewPw2').value;
+  const err = document.getElementById('modalPwError');
+
+  const showErr = (msg) => { err.textContent = msg; err.style.display = 'block'; };
+
+  if (!curPw) return showErr('현재 비밀번호를 입력하세요.');
+  if (!newPw1) return showErr('새 비밀번호를 입력하세요.');
+  if (newPw1.length < 4) return showErr('비밀번호는 4자 이상이어야 합니다.');
+  if (newPw1 !== newPw2) return showErr('새 비밀번호가 일치하지 않습니다.');
+
+  const data = loadData();
+  const ev = data.evaluators.find(e => e.name === currentUser);
+  if (!ev) return showErr('인사위원 정보를 찾을 수 없습니다.');
+
+  const correctPw = ev.password || 'kijun1234!';
+  if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
+  if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
+
+  ev.password = newPw1;
+  saveEvaluators(data.evaluators);
+  closeChangePwModal();
+  alert('비밀번호가 변경되었습니다.');
+}
+
+function goAdmin() {
+  renderAdmin();
+  showPage('pageAdmin');
+}
+
+function goSelectTeacher() {
+  renderTeacherList();
+  showPage('pageSelectTeacher');
+}
+
+// ==================== LOGIN ====================
+function populateLoginSelect() {
+  const data = loadData();
+  const sel = document.getElementById('loginName');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- 이름을 선택하세요 --</option>';
+  data.evaluators.forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev.name;
+    opt.textContent = ev.name + (ev.role ? ' (' + ev.role + ')' : '');
+    if (ev.name === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function switchLoginTab(tab) {
+  currentLoginTab = tab;
+  document.querySelectorAll('#loginTabs .tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'evaluator') || (i === 1 && tab === 'admin'));
+  });
+  document.getElementById('loginEvaluator').style.display = tab === 'evaluator' ? 'block' : 'none';
+  document.getElementById('loginAdmin').style.display = tab === 'admin' ? 'block' : 'none';
+  if (tab === 'evaluator') populateLoginSelect();
+}
+
+function doLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const err = document.getElementById('loginError');
+  if (!name) { err.textContent = '이름을 선택하세요.'; err.style.display = 'block'; return; }
+  if (!pw) { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
+  const data = loadData();
+  const evaluator = data.evaluators.find(ev => ev.name === name);
+  if (!evaluator) { err.textContent = '등록되지 않은 이름입니다. 관리자에게 문의하세요.'; err.style.display = 'block'; return; }
+  const correctPw = evaluator.password || 'kijun1234!';
+  if (pw !== correctPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  currentUser = name;
+  isAdmin = false;
+  document.getElementById('headerUser').textContent = name + ' 위원';
+  document.getElementById('adminBtn').style.display = 'none';
+  document.getElementById('changePwBtn').style.display = 'inline-block';
+  goSelectTeacher();
+}
+
+function doAdminLogin() {
+  const pw = document.getElementById('adminPw').value;
+  const err = document.getElementById('adminLoginError');
+  const data = loadData();
+  if (pw !== data.adminPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  currentUser = '관리자';
+  isAdmin = true;
+  document.getElementById('headerUser').textContent = '관리자';
+  document.getElementById('adminBtn').style.display = 'none';
+  document.getElementById('changePwBtn').style.display = 'none';
+  renderAdmin();
+  showPage('pageAdmin');
+}
+
+// ==================== TEACHER LIST ====================
+function renderTeacherList() {
+  const data = loadData();
+  const listEl = document.getElementById('teacherList');
+  document.getElementById('selectDesc').textContent =
+    currentUser + ' 위원님, 평가할 기간제 교사를 선택하세요.';
+
+  if (data.teachers.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="icon">👩‍🏫</div><p>등록된 교사가 없습니다.<br>관리자 페이지에서 교사를 추가하세요.</p></div>';
+    return;
+  }
+
+  listEl.innerHTML = data.teachers.map(t => {
+    const myEval = data.evals.find(e => e.evaluatorName === currentUser && e.teacherId === t.id);
+    const statusHtml = myEval
+      ? `<span class="eval-status status-done">평가완료 ${myEval.total}점</span>`
+      : `<span class="eval-status status-pending">미평가</span>`;
+    return `<div class="teacher-item" onclick="selectTeacher(${t.id})">
+      <div>
+        <div class="name">${t.name}</div>
+        <div class="subject">${t.subject || ''}</div>
+      </div>
+      ${statusHtml}
+    </div>`;
+  }).join('');
+}
+
+// ==================== EVALUATION ====================
+function selectTeacher(id) {
+  const data = loadData();
+  currentTeacher = data.teachers.find(t => t.id === id);
+  if (!currentTeacher) return;
+
+  // Load existing eval if any
+  const existing = data.evals.find(e => e.evaluatorName === currentUser && e.teacherId === id);
+  scores = existing ? [...existing.scores] : [0, 0, 0, 0, 0];
+
+  document.getElementById('evalTeacherName').textContent =
+    currentTeacher.name + (currentTeacher.subject ? ' (' + currentTeacher.subject + ')' : '');
+
+  renderEvalForm();
+  updateTotal();
+  showPage('pageEvaluate');
+}
+
+function renderEvalForm() {
+  const el = document.getElementById('evalForm');
+  el.innerHTML = CRITERIA.map((name, idx) => {
+    const gradeButtons = GRADES.map(g =>
+      `<button class="score-btn ${scores[idx] >= g.min && scores[idx] <= g.max ? 'selected' : ''}"
+        onclick="setGrade(${idx}, ${g.min}, ${g.max})">
+        <div class="grade">${g.label}</div>
+        <div class="range">${g.min}~${g.max}</div>
+        <div class="points">점</div>
+      </button>`
+    ).join('');
+
+    return `<div class="score-section">
+      <div class="item-header">
+        <div class="item-num">${idx+1}</div>
+        <div class="item-name">${name}</div>
+        <div class="item-max">최대 20점</div>
+      </div>
+      <div class="score-grid">${gradeButtons}</div>
+      <div class="score-input-row">
+        <input type="number" id="scoreInput${idx}" min="1" max="20" value="${scores[idx] || ''}"
+          placeholder="0" oninput="setScoreDirect(${idx}, this.value)">
+        <span class="score-label">점 (1~20)</span>
+        <span class="score-grade-display gb-${getGrade(scores[idx])}" id="gradeLabel${idx}">
+          ${scores[idx] ? getGrade(scores[idx]) : '-'}
+        </span>
+      </div>
+    </div>`;
+  }).join('<div class="divider"></div>');
+}
+
+function setGrade(idx, min, max) {
+  // Set to midpoint of range, but keep existing if in range, else set to max
+  if (scores[idx] >= min && scores[idx] <= max) return;
+  scores[idx] = max;
+  refreshScoreUI(idx);
+  updateTotal();
+}
+
+function setScoreDirect(idx, val) {
+  const v = parseInt(val);
+  if (isNaN(v) || v < 1) { scores[idx] = 0; }
+  else if (v > 20) { scores[idx] = 20; document.getElementById('scoreInput' + idx).value = 20; }
+  else { scores[idx] = v; }
+  refreshScoreUI(idx);
+  updateTotal();
+}
+
+function refreshScoreUI(idx) {
+  // Refresh grade buttons
+  const section = document.querySelectorAll('.score-section')[idx];
+  if (!section) return;
+  section.querySelectorAll('.score-btn').forEach((btn, gi) => {
+    const g = GRADES[gi];
+    btn.classList.toggle('selected', scores[idx] >= g.min && scores[idx] <= g.max);
+  });
+  // Refresh input
+  const input = document.getElementById('scoreInput' + idx);
+  if (input && scores[idx] > 0) input.value = scores[idx];
+  // Refresh label
+  const lbl = document.getElementById('gradeLabel' + idx);
+  if (lbl) {
+    const grade = getGrade(scores[idx]);
+    lbl.textContent = scores[idx] ? grade : '-';
+    lbl.className = 'score-grade-display gb-' + grade;
+  }
+}
+
+function updateTotal() {
+  const total = scores.reduce((a, b) => a + b, 0);
+  document.getElementById('totalScore').textContent = total;
+  const grade = getTotalGrade(total);
+  const gradeEl = document.getElementById('totalGrade');
+  gradeEl.textContent = grade === '-' ? '미입력' : grade;
+}
+
+function submitEval() {
+  const unentered = scores.filter(s => !s || s < 1);
+  if (unentered.length > 0) {
+    alert(`아직 입력하지 않은 항목이 ${unentered.length}개 있습니다.\n모든 항목을 입력해주세요.`);
+    return;
+  }
+  const total = scores.reduce((a, b) => a + b, 0);
+  const data = loadData();
+
+  // Remove existing eval from same evaluator for same teacher
+  const filtered = data.evals.filter(e => !(e.evaluatorName === currentUser && e.teacherId === currentTeacher.id));
+  filtered.push({
+    id: Date.now(),
+    evaluatorName: currentUser,
+    teacherId: currentTeacher.id,
+    teacherName: currentTeacher.name,
+    teacherSubject: currentTeacher.subject || '',
+    scores: [...scores],
+    total,
+    grade: getTotalGrade(total),
+    timestamp: new Date().toISOString(),
+  });
+  saveEvals(filtered);
+
+  document.getElementById('completeTeacher').textContent =
+    currentTeacher.name + (currentTeacher.subject ? ' (' + currentTeacher.subject + ')' : '') + ' 평가 완료';
+  document.getElementById('completeScore').textContent = total + '점 / 100점';
+  const grade = getTotalGrade(total);
+  document.getElementById('completeGrade').innerHTML =
+    `<span class="grade-badge gb-${grade}" style="font-size:16px;padding:6px 18px">${grade}</span>`;
+  showPage('pageComplete');
+}
+
+// ==================== ADMIN ====================
+function renderAdmin() {
+  const data = loadData();
+  document.getElementById('evalYear').value = data.evalYear;
+  renderStats(data);
+  renderSummaryTable(data);
+  renderDetailFilters(data);
+  renderDetailTable();
+  renderTeacherMgmt(data);
+  renderEvaluatorMgmt(data);
+}
+
+function switchAdminTab(tab) {
+  currentAdminTab = tab;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+function renderStats(data) {
+  const teachers = data.teachers;
+  const evals = data.evals;
+  const evaluators = [...new Set(evals.map(e => e.evaluatorName))];
+  const totalPossible = teachers.length * evaluators.length;
+  const pct = totalPossible > 0 ? Math.round(evals.length / totalPossible * 100) : 0;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="num">${teachers.length}</div>
+      <div class="lbl">평가 대상 교사</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">${evaluators.length}</div>
+      <div class="lbl">참여 평가위원</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">${evals.length}</div>
+      <div class="lbl">제출된 평가</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">${pct}%</div>
+      <div class="lbl">평가 완료율</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    </div>
+  `;
+}
+
+function renderSummaryTable(data) {
+  const { teachers, evals } = data;
+  const wrap = document.getElementById('summaryTableWrap');
+
+  if (teachers.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>등록된 교사가 없습니다.</p></div>';
+    return;
+  }
+
+  const criteriaHeaders = CRITERIA.map((c, i) =>
+    `<th>항목${i+1}<br><span style="font-weight:400;font-size:10px">${c}</span></th>`
+  ).join('');
+
+  const rows = teachers.map(t => {
+    const teacherEvals = evals.filter(e => e.teacherId === t.id);
+    if (teacherEvals.length === 0) {
+      return `<tr>
+        <td class="td-name">${t.name}</td>
+        <td>${t.subject || '-'}</td>
+        <td>0</td>
+        ${CRITERIA.map(() => '<td>-</td>').join('')}
+        <td class="td-avg">-</td>
+        <td>-</td>
+      </tr>`;
+    }
+    const avgScores = CRITERIA.map((_, i) => {
+      const sum = teacherEvals.reduce((a, e) => a + (e.scores[i] || 0), 0);
+      return (sum / teacherEvals.length).toFixed(1);
+    });
+    const avgTotal = (teacherEvals.reduce((a, e) => a + e.total, 0) / teacherEvals.length).toFixed(1);
+    const grade = getTotalGrade(Math.round(parseFloat(avgTotal)));
+    return `<tr>
+      <td class="td-name">${t.name}</td>
+      <td>${t.subject || '-'}</td>
+      <td>${teacherEvals.length}명</td>
+      ${avgScores.map(s => `<td>${s}</td>`).join('')}
+      <td class="td-avg">${avgTotal}</td>
+      <td><span class="grade-badge gb-${grade}">${grade}</span></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>이름</th><th>담당과목</th><th>평가인원</th>
+      ${criteriaHeaders}
+      <th>평균총점</th><th>등급</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderDetailFilters(data) {
+  const teachers = [...new Set(data.evals.map(e => e.teacherName))];
+  const evaluators = [...new Set(data.evals.map(e => e.evaluatorName))];
+
+  const tf = document.getElementById('filterTeacher');
+  const ef = document.getElementById('filterEvaluator');
+  const curT = tf.value, curE = ef.value;
+
+  tf.innerHTML = '<option value="">전체 교사</option>' +
+    teachers.map(n => `<option value="${n}" ${n===curT?'selected':''}>${n}</option>`).join('');
+  ef.innerHTML = '<option value="">전체 평가위원</option>' +
+    evaluators.map(n => `<option value="${n}" ${n===curE?'selected':''}>${n}</option>`).join('');
+}
+
+function renderDetailTable() {
+  const data = loadData();
+  let evals = data.evals;
+  const ft = document.getElementById('filterTeacher').value;
+  const fe = document.getElementById('filterEvaluator').value;
+  if (ft) evals = evals.filter(e => e.teacherName === ft);
+  if (fe) evals = evals.filter(e => e.evaluatorName === fe);
+
+  const wrap = document.getElementById('detailTableWrap');
+  if (evals.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>평가 내역이 없습니다.</p></div>';
+    return;
+  }
+
+  const criteriaHeaders = CRITERIA.map((c, i) =>
+    `<th>항목${i+1}</th>`
+  ).join('');
+
+  const rows = evals.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(e => {
+    const dt = new Date(e.timestamp).toLocaleString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `<tr>
+      <td>${dt}</td>
+      <td class="td-name">${e.teacherName}</td>
+      <td>${e.teacherSubject || '-'}</td>
+      <td>${e.evaluatorName}</td>
+      ${e.scores.map(s => `<td>${s}</td>`).join('')}
+      <td class="td-avg">${e.total}</td>
+      <td><span class="grade-badge gb-${e.grade}">${e.grade}</span></td>
+      <td><button onclick="deleteEval(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:16px">🗑</button></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>일시</th><th>교사</th><th>담당과목</th><th>평가위원</th>
+      ${criteriaHeaders}
+      <th>총점</th><th>등급</th><th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function deleteEval(id) {
+  if (!confirm('이 평가 내역을 삭제하시겠습니까?')) return;
+  const data = loadData();
+  saveEvals(data.evals.filter(e => e.id !== id));
+  renderAdmin();
+}
+
+function renderTeacherMgmt(data) {
+  const el = document.getElementById('teacherMgmtList');
+  if (data.teachers.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">등록된 교사가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = data.teachers.map(t => `
+    <div class="teacher-row">
+      <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher(${t.id}, 'name', this.value)" placeholder="이름">
+      <input type="text" value="${t.subject || ''}" class="sub-input" onchange="updateTeacher(${t.id}, 'subject', this.value)" placeholder="담당과목">
+      <button class="btn-icon" onclick="removeTeacher(${t.id})" title="삭제">🗑</button>
+    </div>
+  `).join('');
+}
+
+function addTeacher() {
+  const name = document.getElementById('newTeacherName').value.trim();
+  const subject = document.getElementById('newTeacherSubject').value.trim();
+  if (!name) { alert('교사 이름을 입력하세요.'); return; }
+  const data = loadData();
+  const id = Date.now();
+  data.teachers.push({ id, name, subject });
+  saveTeachers(data.teachers);
+  document.getElementById('newTeacherName').value = '';
+  document.getElementById('newTeacherSubject').value = '';
+  renderTeacherMgmt(loadData());
+}
+
+function updateTeacher(id, field, val) {
+  const data = loadData();
+  const t = data.teachers.find(t => t.id === id);
+  if (t) { t[field] = val; saveTeachers(data.teachers); }
+}
+
+function removeTeacher(id) {
+  if (!confirm('이 교사를 삭제하시겠습니까?\n관련 평가 데이터는 유지됩니다.')) return;
+  const data = loadData();
+  saveTeachers(data.teachers.filter(t => t.id !== id));
+  renderTeacherMgmt(loadData());
+}
+
+// ==================== EVALUATOR MGMT ====================
+function renderEvaluatorMgmt(data) {
+  const el = document.getElementById('evaluatorMgmtList');
+  if (data.evaluators.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">등록된 인사위원이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = data.evaluators.map(ev => `
+    <div class="teacher-row">
+      <input type="text" value="${ev.name}" class="sub-input" onchange="updateEvaluator(${ev.id}, 'name', this.value)" placeholder="이름">
+      <input type="text" value="${ev.role || ''}" class="sub-input" onchange="updateEvaluator(${ev.id}, 'role', this.value)" placeholder="직위 (선택)">
+      <button class="btn-icon" onclick="removeEvaluator(${ev.id})" title="삭제">🗑</button>
+    </div>
+  `).join('');
+}
+
+function switchEvTab(tab) {
+  document.getElementById('evTabList').classList.toggle('active', tab === 'list');
+  document.getElementById('evTabPw').classList.toggle('active', tab === 'pw');
+  document.getElementById('evTabContentList').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('evTabContentPw').style.display = tab === 'pw' ? 'block' : 'none';
+  if (tab === 'pw') renderEvaluatorPwList(loadData());
+}
+
+function renderEvaluatorPwList(data) {
+  const el = document.getElementById('evaluatorPwList');
+  if (data.evaluators.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">등록된 인사위원이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = data.evaluators.map(ev => `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="min-width:90px;font-weight:600;font-size:14px">${ev.name}${ev.role ? ' <span style="font-size:12px;color:var(--muted);font-weight:400">('+ev.role+')</span>' : ''}</div>
+      <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw(${ev.id})">
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setEvaluatorPw(${ev.id})">변경</button>
+      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetEvaluatorPw(${ev.id})">초기화</button>
+    </div>
+  `).join('');
+}
+
+function setEvaluatorPw(id) {
+  const input = document.getElementById('evpw_' + id);
+  const newPw = input.value.trim();
+  if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
+  const data = loadData();
+  const ev = data.evaluators.find(e => e.id === id);
+  if (!ev) return;
+  ev.password = newPw;
+  saveEvaluators(data.evaluators);
+  input.value = '';
+  alert(`${ev.name} 위원의 비밀번호가 변경되었습니다.`);
+}
+
+function resetEvaluatorPw(id) {
+  const data = loadData();
+  const ev = data.evaluators.find(e => e.id === id);
+  if (!ev) return;
+  if (!confirm(`${ev.name} 위원의 비밀번호를 초기값(kijun1234!)으로 초기화하시겠습니까?`)) return;
+  ev.password = 'kijun1234!';
+  saveEvaluators(data.evaluators);
+  alert(`${ev.name} 위원의 비밀번호가 초기화되었습니다.`);
+}
+
+function addEvaluator() {
+  const name = document.getElementById('newEvaluatorName').value.trim();
+  const role = document.getElementById('newEvaluatorRole').value.trim();
+  if (!name) { alert('인사위원 이름을 입력하세요.'); return; }
+  const data = loadData();
+  if (data.evaluators.find(ev => ev.name === name)) { alert('이미 등록된 이름입니다.'); return; }
+  data.evaluators.push({ id: Date.now(), name, role, password: 'kijun1234!' });
+  saveEvaluators(data.evaluators);
+  document.getElementById('newEvaluatorName').value = '';
+  document.getElementById('newEvaluatorRole').value = '';
+  renderEvaluatorMgmt(loadData());
+}
+
+function updateEvaluator(id, field, val) {
+  const data = loadData();
+  const ev = data.evaluators.find(e => e.id === id);
+  if (ev) { ev[field] = val; saveEvaluators(data.evaluators); }
+}
+
+function removeEvaluator(id) {
+  if (!confirm('이 인사위원을 삭제하시겠습니까?')) return;
+  const data = loadData();
+  saveEvaluators(data.evaluators.filter(ev => ev.id !== id));
+  renderEvaluatorMgmt(loadData());
+}
+
+function changePw() {
+  const p1 = document.getElementById('newPw1').value;
+  const p2 = document.getElementById('newPw2').value;
+  const msg = document.getElementById('pwMsg');
+  if (!p1) { showMsg(msg, 'error', '새 비밀번호를 입력하세요.'); return; }
+  if (p1 !== p2) { showMsg(msg, 'error', '비밀번호가 일치하지 않습니다.'); return; }
+  localStorage.setItem('kj_adminpw', p1);
+  showMsg(msg, 'success', '비밀번호가 변경되었습니다.');
+  document.getElementById('newPw1').value = '';
+  document.getElementById('newPw2').value = '';
+}
+
+function saveSettings() {
+  const year = document.getElementById('evalYear').value.trim();
+  localStorage.setItem('kj_year', year || '2026');
+  alert('저장되었습니다.');
+}
+
+function clearAllData() {
+  if (!confirm('모든 평가 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+  if (!confirm('정말로 삭제하시겠습니까?')) return;
+  localStorage.removeItem('kj_evals');
+  renderAdmin();
+  alert('초기화되었습니다.');
+}
+
+function showMsg(el, type, text) {
+  el.className = 'alert alert-' + (type === 'success' ? 'success' : 'error');
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// 모달 외부 클릭 / ESC 닫기
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeChangePwModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeChangePwModal();
+});
+
+// ==================== EXCEL EXPORT ====================
+function exportExcel() {
+  const data = loadData();
+  const year = data.evalYear || '2025';
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Summary
+  const summaryData = [
+    [`${year}학년도 기간제교원 근무평가 집계표 - 전주기전여자고등학교`],
+    [],
+    ['교사명', '담당과목', '평가인원', ...CRITERIA.map((c,i) => `항목${i+1} 평균\n${c}`), '평균 총점', '최종 등급'],
+  ];
+
+  data.teachers.forEach(t => {
+    const teacherEvals = data.evals.filter(e => e.teacherId === t.id);
+    if (teacherEvals.length === 0) {
+      summaryData.push([t.name, t.subject || '', 0, ...CRITERIA.map(() => '-'), '-', '미평가']);
+      return;
+    }
+    const avgScores = CRITERIA.map((_, i) => {
+      const sum = teacherEvals.reduce((a, e) => a + (e.scores[i] || 0), 0);
+      return parseFloat((sum / teacherEvals.length).toFixed(2));
+    });
+    const avgTotal = parseFloat((teacherEvals.reduce((a, e) => a + e.total, 0) / teacherEvals.length).toFixed(2));
+    const grade = getTotalGrade(Math.round(avgTotal));
+    summaryData.push([t.name, t.subject || '', teacherEvals.length, ...avgScores, avgTotal, grade]);
+  });
+
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws1['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 8 }, ...CRITERIA.map(() => ({ wch: 12 })), { wch: 10 }, { wch: 10 }];
+  ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
+  XLSX.utils.book_append_sheet(wb, ws1, '집계표');
+
+  // Sheet 2: Detail
+  const detailHeader = ['평가일시', '교사명', '담당과목', '평가위원', ...CRITERIA.map((c,i) => `항목${i+1} ${c}`), '총점', '등급'];
+  const detailRows = data.evals
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .map(e => [
+      new Date(e.timestamp).toLocaleString('ko-KR'),
+      e.teacherName, e.teacherSubject || '',
+      e.evaluatorName,
+      ...e.scores,
+      e.total, e.grade
+    ]);
+
+  const ws2 = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows]);
+  ws2['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, ...CRITERIA.map(() => ({ wch: 14 })), { wch: 8 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws2, '상세내역');
+
+  // Sheet 3: Per-evaluator
+  const evNames = [...new Set(data.evals.map(e => e.evaluatorName))];
+  evNames.forEach(ev => {
+    const evEvals = data.evals.filter(e => e.evaluatorName === ev);
+    const rows = [
+      [`평가위원: ${ev}`],
+      [],
+      ['교사명', '담당과목', ...CRITERIA, '총점', '등급'],
+      ...evEvals.map(e => [e.teacherName, e.teacherSubject || '', ...e.scores, e.total, e.grade]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 12 }, { wch: 10 }, ...CRITERIA.map(() => ({ wch: 12 })), { wch: 8 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, ev.substring(0, 20));
+  });
+
+  XLSX.writeFile(wb, `기간제교원근무평가_${year}_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '').replace(/ /g, '')}.xlsx`);
+}
+
+function exportExcelDetail() {
+  const data = loadData();
+  const year = data.evalYear || '2025';
+  const wb = XLSX.utils.book_new();
+
+  const ft = document.getElementById('filterTeacher').value;
+  const fe = document.getElementById('filterEvaluator').value;
+  let evals = data.evals;
+  if (ft) evals = evals.filter(e => e.teacherName === ft);
+  if (fe) evals = evals.filter(e => e.evaluatorName === fe);
+
+  const header = ['평가일시', '교사명', '담당과목', '평가위원', ...CRITERIA.map((c,i) => `항목${i+1} ${c}`), '총점', '등급'];
+  const rows = evals
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .map(e => [
+      new Date(e.timestamp).toLocaleString('ko-KR'),
+      e.teacherName, e.teacherSubject || '',
+      e.evaluatorName,
+      ...e.scores,
+      e.total, e.grade
+    ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, ...CRITERIA.map(() => ({ wch: 14 })), { wch: 8 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws, '상세내역');
+  XLSX.writeFile(wb, `기간제교원평가_상세_${year}.xlsx`);
+}
+</script>
+</body>
+</html>
