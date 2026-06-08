@@ -506,6 +506,7 @@
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn btn-secondary" style="flex:1" onclick="goSelectTeacher()">취소</button>
       <button class="btn btn-primary" style="flex:2" onclick="submitEval()">평가 제출</button>
+      <button class="btn" style="flex:2;background:#6c757d;color:white" onclick="printEvalCurrent()">🖨 출력하기</button>
     </div>
   </div>
 </div>
@@ -1367,12 +1368,36 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ==================== 평가서 출력 ====================
+function printEvalCurrent() {
+  // 미입력 항목 검사
+  const missing = [];
+  scores.forEach((s, i) => {
+    if (!s || s < 1) missing.push(`${i + 1}. ${CRITERIA[i]}`);
+  });
+  if (missing.length > 0) {
+    alert(`아래 항목이 아직 입력되지 않았습니다.\n\n${missing.join('\n')}\n\n모든 항목을 입력한 후 출력하세요.`);
+    return;
+  }
+  // 현재 입력 중인 점수로 임시 평가 객체 구성해서 출력
+  const data = loadData();
+  const tempEval = {
+    evaluatorName: currentUser,
+    teacherId: currentTeacher.id,
+    scores: [...scores],
+    total: scores.reduce((a, b) => a + b, 0),
+  };
+  printEvalData(currentTeacher, tempEval, data);
+}
+
 function printEval(teacherId) {
   const data = loadData();
   const teacher = data.teachers.find(t => t.id === teacherId);
   const ev = data.evals.find(e => e.evaluatorName === currentUser && e.teacherId === teacherId);
   if (!teacher || !ev) return;
+  printEvalData(teacher, ev, data);
+}
 
+function printEvalData(teacher, ev, data) {
   const gradeLabel = (score) => {
     if (score >= 17) return '매우우수';
     if (score >= 13) return '우수';
