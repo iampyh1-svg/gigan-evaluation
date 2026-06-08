@@ -629,7 +629,11 @@
         <div class="divider"></div>
         <div class="form-group">
           <label>평가 연도</label>
-          <input type="text" id="evalYear" placeholder="예: 2025">
+          <input type="text" id="evalYear" placeholder="예: 2026">
+        </div>
+        <div class="form-group">
+          <label>학교장 성명 <span style="font-size:11px;color:var(--muted)">(결과 출력 서류 확인자)</span></label>
+          <input type="text" id="principalName" placeholder="학교장 성명 입력">
         </div>
         <button class="btn btn-primary" onclick="saveSettings()">저장</button>
         <div class="divider"></div>
@@ -716,6 +720,7 @@ function loadData() {
     evals: JSON.parse(localStorage.getItem('kj_evals') || '[]'),
     adminPw: localStorage.getItem('kj_adminpw') || 'admin1234',
     evalYear: localStorage.getItem('kj_year') || '2026',
+    principalName: localStorage.getItem('kj_principal') || '',
   };
 }
 
@@ -1038,6 +1043,7 @@ function submitEval() {
 function renderAdmin() {
   const data = loadData();
   document.getElementById('evalYear').value = data.evalYear;
+  document.getElementById('principalName').value = data.principalName || '';
   renderStats(data);
   renderSummaryTable(data);
   renderDetailFilters(data);
@@ -1105,6 +1111,7 @@ function renderSummaryTable(data) {
         ${CRITERIA.map(() => '<td>-</td>').join('')}
         <td class="td-avg">-</td>
         <td>-</td>
+        <td>-</td>
       </tr>`;
     }
     const avgScores = CRITERIA.map((_, i) => {
@@ -1120,6 +1127,7 @@ function renderSummaryTable(data) {
       ${avgScores.map(s => `<td>${s}</td>`).join('')}
       <td class="td-avg">${avgTotal}</td>
       <td><span class="grade-badge gb-${grade}">${grade}</span></td>
+      <td><button class="btn-print-small" onclick="printResult(${t.id})">🖨 결과 출력</button></td>
     </tr>`;
   }).join('');
 
@@ -1127,7 +1135,7 @@ function renderSummaryTable(data) {
     <thead><tr>
       <th>이름</th><th>담당과목</th><th>평가인원</th>
       ${criteriaHeaders}
-      <th>평균총점</th><th>등급</th>
+      <th>평균총점</th><th>등급</th><th>출력</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -1340,7 +1348,9 @@ function changePw() {
 
 function saveSettings() {
   const year = document.getElementById('evalYear').value.trim();
+  const principal = document.getElementById('principalName').value.trim();
   localStorage.setItem('kj_year', year || '2026');
+  localStorage.setItem('kj_principal', principal);
   alert('저장되었습니다.');
 }
 
@@ -1366,6 +1376,146 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeChangePwModal();
 });
+
+// ==================== 결과 출력 (관리자용 평균 집계) ====================
+function printResult(teacherId) {
+  const data = loadData();
+  const teacher = data.teachers.find(t => t.id === teacherId);
+  if (!teacher) return;
+  const teacherEvals = data.evals.filter(e => e.teacherId === teacherId);
+  if (teacherEvals.length === 0) {
+    alert('아직 제출된 평가가 없습니다.');
+    return;
+  }
+
+  const year = data.evalYear || '2026';
+  const principal = data.principalName || '';
+
+  // 항목별 평균 (소수점 둘째자리 반올림)
+  const avgScores = CRITERIA.map((_, i) => {
+    const sum = teacherEvals.reduce((a, e) => a + (e.scores[i] || 0), 0);
+    return Math.round((sum / teacherEvals.length) * 100) / 100;
+  });
+  const avgTotal = Math.round(avgScores.reduce((a, b) => a + b, 0) * 100) / 100;
+
+  const gradeLabel = (score) => {
+    if (score >= 17) return '매우우수';
+    if (score >= 13) return '우수';
+    if (score >= 9)  return '보통';
+    if (score >= 5)  return '미흡';
+    if (score >= 1)  return '매우미흡';
+    return '-';
+  };
+
+  const criteriaRows = CRITERIA.map((name, ci) => {
+    const subs = SUB_ITEMS[ci];
+    const avg = avgScores[ci];
+    let html = `<tr>
+      <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
+      <td class="criteria-name" rowspan="${subs.length}">${name}</td>
+      <td class="sub-item">${subs[0]}</td>
+      <td class="avg-col" rowspan="${subs.length}">${avg.toFixed(2)}<br><span style="font-size:8pt;color:#555">(${gradeLabel(avg)})</span></td>
+    </tr>`;
+    for (let i = 1; i < subs.length; i++) {
+      html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
+    }
+    if (ci === 2) {
+      html += `<tr><td colspan="4" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능(제출 시 삭제)</td></tr>`;
+    }
+    return html;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>기간제교원 근무 평가서(결과) - ${teacher.name}</title>
+<style>
+  @page { size: A4; margin: 15mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 10pt; color: #000; }
+  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 70px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 4px 6px; font-size: 9.5pt; vertical-align: middle; }
+  .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
+  .num-cell { text-align: center; width: 24px; font-weight: bold; }
+  .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
+  .sub-item { font-size: 9pt; }
+  .avg-col { text-align: center; width: 90px; font-weight: bold; font-size: 11pt; }
+  .total-row td { font-weight: bold; background: #f9f9f9; }
+  .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
+  .legend { font-size: 9pt; margin-bottom: 6px; }
+  .sign-row { font-size: 10pt; margin-top: 10px; }
+  .evaluators-note { font-size: 9pt; color: #444; margin-bottom: 8px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none; }
+  }
+  .print-btn {
+    display: block; margin: 16px auto 0; padding: 10px 32px;
+    background: #1a5276; color: white; border: none; border-radius: 8px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<h1>기간제교원 근무 평가서(결과)</h1>
+
+<table class="info-table">
+  <tr>
+    <td class="lbl">학교명</td>
+    <td colspan="3">전주기전여자고등학교</td>
+    <td class="lbl">성명</td>
+    <td>${teacher.name}</td>
+    <td class="lbl">담당과목</td>
+    <td>${teacher.subject || ''}</td>
+  </tr>
+  <tr>
+    <td class="lbl">계약기간</td>
+    <td colspan="3">${year}.03.01. ~ ${parseInt(year)+1}.02.28.</td>
+    <td class="lbl">성별</td>
+    <td></td>
+    <td class="lbl">생년월일</td>
+    <td></td>
+  </tr>
+</table>
+
+<div class="evaluators-note">※ 평가위원 ${teacherEvals.length}명 평균 점수 (소수점 셋째자리에서 반올림)</div>
+
+<table class="main-table">
+  <thead>
+    <tr>
+      <th>순</th>
+      <th colspan="2">평 가 요 소</th>
+      <th>평가결과<br><span style="font-weight:normal;font-size:8pt">(평균점수)</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    ${criteriaRows}
+    <tr class="total-row">
+      <td colspan="2" style="text-align:center">총 점 (합계)</td>
+      <td style="font-size:8.5pt;color:#555">※ 소수점 셋째자리에서 반올림</td>
+      <td style="text-align:center;font-size:13pt">${avgTotal.toFixed(2)}점<br>
+        <span style="font-size:9pt;font-weight:normal">(${gradeLabel(avgTotal)})</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
+<div class="sign-row">확인자 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: 학교장 &nbsp;&nbsp; 성명: ${principal} &nbsp;&nbsp;&nbsp; (서명)</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write(html);
+  win.document.close();
+}
 
 // ==================== 평가서 출력 ====================
 function printEvalCurrent() {
