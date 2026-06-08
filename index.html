@@ -624,24 +624,57 @@
       <div class="divider"></div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--primary)">기간제교원 경력 <span style="font-size:12px;font-weight:400;color:var(--muted)">(최대 3곳, 기간제교원 경력만)</span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">추천학교 포함한 최근 근무교 순서로 작성</div>
-      ${[1,2,3].map(n => `
       <div style="border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">${n}번째 근무교</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">1번째 근무교</div>
         <div class="form-group" style="margin-bottom:10px">
           <label>학교명</label>
-          <input type="text" id="rec_school${n}" placeholder="학교명 입력">
+          <input type="text" id="rec_school1" placeholder="학교명 입력">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group" style="margin-bottom:0">
             <label>근무 시작일</label>
-            <input type="text" id="rec_from${n}" placeholder="예: 2024. 3. 1.">
+            <input type="text" id="rec_from1" placeholder="예: 2024. 3. 1.">
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>근무 종료일</label>
-            <input type="text" id="rec_to${n}" placeholder="예: 2025. 2. 28.">
+            <input type="text" id="rec_to1" placeholder="예: 2025. 2. 28.">
           </div>
         </div>
-      </div>`).join('')}
+      </div>
+      <div style="border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">2번째 근무교</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>학교명</label>
+          <input type="text" id="rec_school2" placeholder="학교명 입력">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 시작일</label>
+            <input type="text" id="rec_from2" placeholder="예: 2024. 3. 1.">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 종료일</label>
+            <input type="text" id="rec_to2" placeholder="예: 2025. 2. 28.">
+          </div>
+        </div>
+      </div>
+      <div style="border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">3번째 근무교</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>학교명</label>
+          <input type="text" id="rec_school3" placeholder="학교명 입력">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 시작일</label>
+            <input type="text" id="rec_from3" placeholder="예: 2024. 3. 1.">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 종료일</label>
+            <input type="text" id="rec_to3" placeholder="예: 2025. 2. 28.">
+          </div>
+        </div>
+      </div>
 
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
