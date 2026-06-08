@@ -1839,10 +1839,6 @@ function openRecommendPrint(rec, data) {
     <td class="lbl" width="70">생년월일</td><td>${rec.birth || ''}</td>
   </tr>
   <tr>
-    <td class="lbl">계약기간</td>
-    <td colspan="5">${rec.contract || ''}</td>
-  </tr>
-  <tr>
     <td class="lbl">생활근거지</td>
     <td colspan="5">${rec.address || ''} <span style="font-size:8pt;color:#555">(※ 구와 동까지만 기입)</span></td>
   </tr>
@@ -2041,7 +2037,7 @@ function printResult(teacherId) {
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${year}.03.01. ~ ${parseInt(year)+1}.02.28.</td>
+    <td colspan="3">${rec.contract || (year + '.03.01. ~ ' + (parseInt(year)+1) + '.02.28.')}</td>
     <td class="lbl">성별</td>
     <td></td>
     <td class="lbl">생년월일</td>
@@ -2115,6 +2111,7 @@ function printEval(teacherId, evaluatorName) {
 }
 
 function printEvalData(teacher, ev, data) {
+  const rec = (data.recommendations || []).find(r => r.teacherName === teacher.name) || {};
   const gradeLabel = (score) => {
     if (score >= 17) return '매우우수';
     if (score >= 13) return '우수';
@@ -2202,7 +2199,7 @@ function printEvalData(teacher, ev, data) {
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${year}.03.01. ~ ${parseInt(year)+1}.02.28.</td>
+    <td colspan="3">${rec.contract || (year + '.03.01. ~ ' + (parseInt(year)+1) + '.02.28.')}</td>
     <td class="lbl">성별</td>
     <td></td>
     <td class="lbl">생년월일</td>
