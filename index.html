@@ -430,7 +430,8 @@
       <div class="school">전주기전여자고등학교<br>기간제교원 근무평가</div>
 
       <div id="loginTabs" class="tab-bar" style="margin-bottom:24px">
-        <button class="tab-btn active" onclick="switchLoginTab('evaluator')">인사위원 로그인</button>
+        <button class="tab-btn active" onclick="switchLoginTab('evaluator')">인사위원</button>
+        <button class="tab-btn" onclick="switchLoginTab('teacher')">기간제 교사</button>
         <button class="tab-btn" onclick="switchLoginTab('admin')">관리자</button>
       </div>
 
@@ -447,6 +448,21 @@
         </div>
         <div id="loginError" class="alert alert-error" style="display:none"></div>
         <button class="btn btn-primary btn-full" onclick="doLogin()">평가 시작</button>
+      </div>
+
+      <div id="loginTeacher" style="display:none">
+        <div class="form-group">
+          <label>이름 선택</label>
+          <select id="teacherLoginName" onchange="document.getElementById('teacherLoginPw').focus()">
+            <option value="">-- 이름을 선택하세요 --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="teacherLoginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doTeacherLogin()">
+        </div>
+        <div id="teacherLoginError" class="alert alert-error" style="display:none"></div>
+        <button class="btn btn-primary btn-full" onclick="doTeacherLogin()">로그인</button>
       </div>
 
       <div id="loginAdmin" style="display:none">
@@ -525,6 +541,117 @@
   </div>
 </div>
 
+<!-- PAGE: TEACHER HOME (추천서 작성) -->
+<div class="page" id="pageTeacherHome">
+  <div class="container">
+    <div class="card">
+      <h2>인력풀 등록 추천서 작성</h2>
+      <div class="desc">【붙임 5】기간제교원 인력풀 등록 대상자 추천서 — 해당 항목을 입력 후 저장하세요.</div>
+
+      <div class="form-group">
+        <label>성명</label>
+        <input type="text" id="rec_name" readonly style="background:#f5f5f5">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>성별</label>
+          <select id="rec_gender">
+            <option value="">선택</option>
+            <option value="남">남</option>
+            <option value="여">여</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>생년월일</label>
+          <input type="text" id="rec_birth" placeholder="예: 1990. 4. 20.">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>생활근거지 <span style="font-size:11px;color:var(--muted)">(구·동까지 기입)</span></label>
+        <input type="text" id="rec_address" placeholder="예: 전북 전주시 완산구 효자동">
+      </div>
+      <div class="form-group">
+        <label>연락처 (핸드폰)</label>
+        <input type="text" id="rec_phone" placeholder="예: 010-0000-0000">
+      </div>
+      <div class="form-group">
+        <label>임용과목</label>
+        <input type="text" id="rec_subject" placeholder="예: 수학">
+      </div>
+      <div class="form-group">
+        <label>소지자격 (표시과목)</label>
+        <input type="text" id="rec_cert" placeholder="예: 중등학교 정교사 1급 수학">
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--primary)">특이사항 (해당란 선택)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+        <label style="font-weight:400;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="radio" name="rec_special" value="1" style="width:auto;margin-top:3px"> 1. 미경력확인서 제출로 채용된 후 인력풀 등재 신청
+        </label>
+        <label style="font-weight:400;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="radio" name="rec_special" value="2" style="width:auto;margin-top:3px"> 2. (유효기간 내) 인력풀 등재기간 연장
+        </label>
+        <label style="font-weight:400;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="radio" name="rec_special" value="3" style="width:auto;margin-top:3px"> 3. 1, 2번 외의 사유로 인력풀 등재 신청
+        </label>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--primary)">교육경력 (추천일 기준 기간제교원 총 경력)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+        <input type="number" id="rec_exp_y" placeholder="0" min="0" style="width:70px;text-align:center"> <span>년</span>
+        <input type="number" id="rec_exp_m" placeholder="0" min="0" max="11" style="width:70px;text-align:center"> <span>월</span>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--primary)">인사위원회 심사</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+        <div class="form-group">
+          <label>심사 여부</label>
+          <select id="rec_review">
+            <option value="">선택</option>
+            <option value="O">O (통과)</option>
+            <option value="X">X (미통과)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>내부결재 공문번호 <span style="font-size:11px;color:var(--muted)">(필수)</span></label>
+          <input type="text" id="rec_docnum" placeholder="예: ○○고-100(2025. 12. 1.)">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--primary)">기간제교원 경력 <span style="font-size:12px;font-weight:400;color:var(--muted)">(최대 3곳, 기간제교원 경력만)</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">추천학교 포함한 최근 근무교 순서로 작성</div>
+      ${[1,2,3].map(n => `
+      <div style="border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">${n}번째 근무교</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>학교명</label>
+          <input type="text" id="rec_school${n}" placeholder="학교명 입력">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 시작일</label>
+            <input type="text" id="rec_from${n}" placeholder="예: 2024. 3. 1.">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>근무 종료일</label>
+            <input type="text" id="rec_to${n}" placeholder="예: 2025. 2. 28.">
+          </div>
+        </div>
+      </div>`).join('')}
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
+        <button class="btn btn-primary" style="flex:2" onclick="saveRecommendation()">💾 저장</button>
+        <button class="btn" style="flex:2;background:#6c757d;color:white" onclick="printRecommendation()">🖨 출력</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE: ADMIN -->
 <div class="page" id="pageAdmin">
   <div class="container-wide">
@@ -533,6 +660,7 @@
       <button class="tab-btn" onclick="switchAdminTab('detail')" id="tabDetail">상세 내역</button>
       <button class="tab-btn" onclick="switchAdminTab('teachers')" id="tabTeachers">기간제 교사 관리</button>
       <button class="tab-btn" onclick="switchAdminTab('evaluators')" id="tabEvaluators">인사위원 관리</button>
+      <button class="tab-btn" onclick="switchAdminTab('recommend')" id="tabRecommend">추천서 현황</button>
       <button class="tab-btn" onclick="switchAdminTab('settings')" id="tabSettings">설정</button>
     </div>
 
@@ -572,14 +700,27 @@
 
     <!-- Teachers Tab -->
     <div class="tab-content" id="adminTeachers">
-      <div class="card">
-        <h2>기간제 교사 목록 관리</h2>
-        <div class="desc">평가 대상 교사를 추가하거나 삭제할 수 있습니다.</div>
-        <div id="teacherMgmtList" class="teacher-mgmt"></div>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
-          <input type="text" id="newTeacherSubject" placeholder="담당과목 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
-          <button class="btn btn-primary" onclick="addTeacher()" style="white-space:nowrap">추가</button>
+      <div class="tab-bar" style="margin-bottom:16px" id="tchrSubTabBar">
+        <button class="tab-btn active" onclick="switchTchrTab('list')" id="tchrTabList">명단 관리</button>
+        <button class="tab-btn" onclick="switchTchrTab('pw')" id="tchrTabPw">비밀번호 설정</button>
+      </div>
+      <div id="tchrTabContentList">
+        <div class="card">
+          <h2>기간제 교사 목록 관리</h2>
+          <div class="desc">평가 대상 교사를 추가하거나 삭제할 수 있습니다. 추가 시 초기 비밀번호: <strong>kijun1234!</strong></div>
+          <div id="teacherMgmtList" class="teacher-mgmt"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
+            <input type="text" id="newTeacherSubject" placeholder="담당과목 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
+            <button class="btn btn-primary" onclick="addTeacher()" style="white-space:nowrap">추가</button>
+          </div>
+        </div>
+      </div>
+      <div id="tchrTabContentPw" style="display:none">
+        <div class="card">
+          <h2>교사 비밀번호 설정</h2>
+          <div class="desc">교사별 로그인 비밀번호를 변경하거나 초기화할 수 있습니다. 초기 비밀번호: <strong>kijun1234!</strong></div>
+          <div id="teacherPwList"></div>
         </div>
       </div>
     </div>
@@ -612,6 +753,16 @@
           <div class="desc">인사위원별 비밀번호를 초기화하거나 변경할 수 있습니다. 초기 비밀번호: <strong>kijun1234!</strong></div>
           <div id="evaluatorPwList"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Recommend Tab -->
+    <div class="tab-content" id="adminRecommend">
+      <div class="card">
+        <div class="action-bar">
+          <h2 style="font-size:17px;margin:0">인력풀 추천서 현황</h2>
+        </div>
+        <div id="recommendTableWrap"></div>
       </div>
     </div>
 
@@ -721,12 +872,14 @@ function loadData() {
     adminPw: localStorage.getItem('kj_adminpw') || 'admin1234',
     evalYear: localStorage.getItem('kj_year') || '2026',
     principalName: localStorage.getItem('kj_principal') || '',
+    recommendations: JSON.parse(localStorage.getItem('kj_recommendations') || '[]'),
   };
 }
 
 function saveTeachers(list) { localStorage.setItem('kj_teachers', JSON.stringify(list)); }
 function saveEvaluators(list) { localStorage.setItem('kj_evaluators', JSON.stringify(list)); }
 function saveEvals(list) { localStorage.setItem('kj_evals', JSON.stringify(list)); }
+function saveRecommendations(list) { localStorage.setItem('kj_recommendations', JSON.stringify(list)); }
 
 window.addEventListener('DOMContentLoaded', populateLoginSelect);
 
@@ -743,7 +896,9 @@ if (!localStorage.getItem('kj_teachers')) {
 // ==================== STATE ====================
 let currentUser = null;
 let isAdmin = false;
+let currentUserType = null; // 'evaluator' | 'teacher' | 'admin'
 let currentTeacher = null;
+let currentTeacherObj = null; // 기간제 교사 로그인용
 let scores = [0, 0, 0, 0, 0];
 let currentAdminTab = 'summary';
 let currentLoginTab = 'evaluator';
@@ -759,8 +914,11 @@ function showPage(id) {
 function logout() {
   currentUser = null;
   isAdmin = false;
+  currentUserType = null;
+  currentTeacherObj = null;
   showPage('pageLogin');
   populateLoginSelect();
+  document.getElementById('teacherLoginPw').value = '';
   document.getElementById('loginPw').value = '';
   document.getElementById('adminPw').value = '';
   document.getElementById('changePwBtn').style.display = 'none';
@@ -799,12 +957,23 @@ function submitChangePw() {
   const ev = data.evaluators.find(e => e.name === currentUser);
   if (!ev) return showErr('인사위원 정보를 찾을 수 없습니다.');
 
-  const correctPw = ev.password || 'kijun1234!';
-  if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
-  if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
-
-  ev.password = newPw1;
-  saveEvaluators(data.evaluators);
+  // 교사 로그인인 경우 teachers에서, 인사위원인 경우 evaluators에서 처리
+  if (currentUserType === 'teacher') {
+    const t = data.teachers.find(t => t.name === currentUser);
+    if (!t) return showErr('교사 정보를 찾을 수 없습니다.');
+    const correctPw = t.password || 'kijun1234!';
+    if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
+    if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
+    t.password = newPw1;
+    saveTeachers(data.teachers);
+  } else {
+    if (!ev) return showErr('인사위원 정보를 찾을 수 없습니다.');
+    const correctPw = ev.password || 'kijun1234!';
+    if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
+    if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
+    ev.password = newPw1;
+    saveEvaluators(data.evaluators);
+  }
   closeChangePwModal();
   alert('비밀번호가 변경되었습니다.');
 }
@@ -836,12 +1005,52 @@ function populateLoginSelect() {
 
 function switchLoginTab(tab) {
   currentLoginTab = tab;
+  const tabs = ['evaluator','teacher','admin'];
   document.querySelectorAll('#loginTabs .tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'evaluator') || (i === 1 && tab === 'admin'));
+    b.classList.toggle('active', tabs[i] === tab);
   });
   document.getElementById('loginEvaluator').style.display = tab === 'evaluator' ? 'block' : 'none';
-  document.getElementById('loginAdmin').style.display = tab === 'admin' ? 'block' : 'none';
+  document.getElementById('loginTeacher').style.display  = tab === 'teacher'   ? 'block' : 'none';
+  document.getElementById('loginAdmin').style.display    = tab === 'admin'     ? 'block' : 'none';
   if (tab === 'evaluator') populateLoginSelect();
+  if (tab === 'teacher')   populateTeacherLoginSelect();
+}
+
+function populateTeacherLoginSelect() {
+  const data = loadData();
+  const sel = document.getElementById('teacherLoginName');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- 이름을 선택하세요 --</option>';
+  data.teachers.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.name;
+    opt.textContent = t.name + (t.subject ? ' (' + t.subject + ')' : '');
+    if (t.name === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function doTeacherLogin() {
+  const name = document.getElementById('teacherLoginName').value.trim();
+  const pw   = document.getElementById('teacherLoginPw').value;
+  const err  = document.getElementById('teacherLoginError');
+  if (!name) { err.textContent = '이름을 선택하세요.'; err.style.display = 'block'; return; }
+  if (!pw)   { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
+  const data = loadData();
+  const teacher = data.teachers.find(t => t.name === name);
+  if (!teacher) { err.textContent = '등록되지 않은 교사입니다.'; err.style.display = 'block'; return; }
+  const correctPw = teacher.password || 'kijun1234!';
+  if (pw !== correctPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  currentUser = name;
+  isAdmin = false;
+  currentUserType = 'teacher';
+  currentTeacherObj = teacher;
+  document.getElementById('headerUser').textContent = name + ' 선생님';
+  document.getElementById('changePwBtn').style.display = 'inline-block';
+  document.getElementById('adminBtn').style.display = 'none';
+  loadRecommendation();
+  showPage('pageTeacherHome');
 }
 
 function doLogin() {
@@ -1050,6 +1259,7 @@ function renderAdmin() {
   renderDetailTable();
   renderTeacherMgmt(data);
   renderEvaluatorMgmt(data);
+  renderRecommendTable(data);
 }
 
 function switchAdminTab(tab) {
@@ -1225,7 +1435,7 @@ function addTeacher() {
   if (!name) { alert('교사 이름을 입력하세요.'); return; }
   const data = loadData();
   const id = Date.now();
-  data.teachers.push({ id, name, subject });
+  data.teachers.push({ id, name, subject, password: 'kijun1234!' });
   saveTeachers(data.teachers);
   document.getElementById('newTeacherName').value = '';
   document.getElementById('newTeacherSubject').value = '';
@@ -1334,6 +1544,278 @@ function removeEvaluator(id) {
   renderEvaluatorMgmt(loadData());
 }
 
+// ==================== 교사 비밀번호 관리 ====================
+function switchTchrTab(tab) {
+  document.getElementById('tchrTabList').classList.toggle('active', tab === 'list');
+  document.getElementById('tchrTabPw').classList.toggle('active', tab === 'pw');
+  document.getElementById('tchrTabContentList').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('tchrTabContentPw').style.display = tab === 'pw' ? 'block' : 'none';
+  if (tab === 'pw') renderTeacherPwList(loadData());
+}
+
+function renderTeacherPwList(data) {
+  const el = document.getElementById('teacherPwList');
+  if (!data.teachers.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">등록된 교사가 없습니다.</div>'; return; }
+  el.innerHTML = data.teachers.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="min-width:90px;font-weight:600;font-size:14px">${t.name}${t.subject?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t.subject})</span>`:''}</div>
+      <input type="password" id="tpw_${t.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setTeacherPw(${t.id})">
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setTeacherPw(${t.id})">변경</button>
+      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetTeacherPw(${t.id})">초기화</button>
+    </div>`).join('');
+}
+
+function setTeacherPw(id) {
+  const input = document.getElementById('tpw_' + id);
+  const newPw = input.value.trim();
+  if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
+  const data = loadData();
+  const t = data.teachers.find(t => t.id === id);
+  if (!t) return;
+  t.password = newPw;
+  saveTeachers(data.teachers);
+  input.value = '';
+  alert(`${t.name} 선생님의 비밀번호가 변경되었습니다.`);
+}
+
+function resetTeacherPw(id) {
+  const data = loadData();
+  const t = data.teachers.find(t => t.id === id);
+  if (!t || !confirm(`${t.name} 선생님의 비밀번호를 초기값(kijun1234!)으로 초기화하시겠습니까?`)) return;
+  t.password = 'kijun1234!';
+  saveTeachers(data.teachers);
+  alert(`${t.name} 선생님의 비밀번호가 초기화되었습니다.`);
+}
+
+// ==================== 추천서 작성 ====================
+function loadRecommendation() {
+  const data = loadData();
+  const teacher = data.teachers.find(t => t.name === currentUser);
+  const rec = data.recommendations.find(r => r.teacherName === currentUser) || {};
+
+  document.getElementById('rec_name').value = currentUser;
+  document.getElementById('rec_gender').value = rec.gender || '';
+  document.getElementById('rec_birth').value = rec.birth || '';
+  document.getElementById('rec_address').value = rec.address || '';
+  document.getElementById('rec_phone').value = rec.phone || '';
+  document.getElementById('rec_subject').value = rec.subject || (teacher ? teacher.subject : '') || '';
+  document.getElementById('rec_cert').value = rec.cert || '';
+  document.getElementById('rec_exp_y').value = rec.expY || '';
+  document.getElementById('rec_exp_m').value = rec.expM || '';
+  document.getElementById('rec_review').value = rec.review || '';
+  document.getElementById('rec_docnum').value = rec.docnum || '';
+  if (rec.special) {
+    const radio = document.querySelector(`input[name="rec_special"][value="${rec.special}"]`);
+    if (radio) radio.checked = true;
+  } else {
+    document.querySelectorAll('input[name="rec_special"]').forEach(r => r.checked = false);
+  }
+  [1,2,3].forEach(n => {
+    const c = rec['career'+n] || {};
+    document.getElementById('rec_school'+n).value = c.school || '';
+    document.getElementById('rec_from'+n).value = c.from || '';
+    document.getElementById('rec_to'+n).value = c.to || '';
+  });
+}
+
+function saveRecommendation() {
+  const data = loadData();
+  const special = document.querySelector('input[name="rec_special"]:checked');
+  const rec = {
+    teacherName: currentUser,
+    gender: document.getElementById('rec_gender').value,
+    birth: document.getElementById('rec_birth').value,
+    address: document.getElementById('rec_address').value,
+    phone: document.getElementById('rec_phone').value,
+    subject: document.getElementById('rec_subject').value,
+    cert: document.getElementById('rec_cert').value,
+    expY: document.getElementById('rec_exp_y').value,
+    expM: document.getElementById('rec_exp_m').value,
+    review: document.getElementById('rec_review').value,
+    docnum: document.getElementById('rec_docnum').value,
+    special: special ? special.value : '',
+    career1: { school: document.getElementById('rec_school1').value, from: document.getElementById('rec_from1').value, to: document.getElementById('rec_to1').value },
+    career2: { school: document.getElementById('rec_school2').value, from: document.getElementById('rec_from2').value, to: document.getElementById('rec_to2').value },
+    career3: { school: document.getElementById('rec_school3').value, from: document.getElementById('rec_from3').value, to: document.getElementById('rec_to3').value },
+    timestamp: new Date().toISOString(),
+  };
+  const list = data.recommendations.filter(r => r.teacherName !== currentUser);
+  list.push(rec);
+  saveRecommendations(list);
+  alert('저장되었습니다.');
+}
+
+function renderRecommendTable(data) {
+  const wrap = document.getElementById('recommendTableWrap');
+  if (!data.recommendations.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📄</div><p>제출된 추천서가 없습니다.</p></div>';
+    return;
+  }
+  const rows = data.recommendations.map(r => {
+    const dt = new Date(r.timestamp).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<tr>
+      <td class="td-name">${r.teacherName}</td>
+      <td>${r.subject || '-'}</td>
+      <td>${r.review || '-'}</td>
+      <td>${dt}</td>
+      <td><button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherName}')">🖨 출력</button></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>교사명</th><th>임용과목</th><th>심사여부</th><th>작성일시</th><th>출력</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function printRecommendAdmin(teacherName) {
+  const data = loadData();
+  const rec = data.recommendations.find(r => r.teacherName === teacherName);
+  if (!rec) { alert('추천서 데이터가 없습니다.'); return; }
+  openRecommendPrint(rec, data);
+}
+
+function printRecommendation() {
+  const data = loadData();
+  const special = document.querySelector('input[name="rec_special"]:checked');
+  const rec = {
+    teacherName: currentUser,
+    gender: document.getElementById('rec_gender').value,
+    birth: document.getElementById('rec_birth').value,
+    address: document.getElementById('rec_address').value,
+    phone: document.getElementById('rec_phone').value,
+    subject: document.getElementById('rec_subject').value,
+    cert: document.getElementById('rec_cert').value,
+    expY: document.getElementById('rec_exp_y').value,
+    expM: document.getElementById('rec_exp_m').value,
+    review: document.getElementById('rec_review').value,
+    docnum: document.getElementById('rec_docnum').value,
+    special: special ? special.value : '',
+    career1: { school: document.getElementById('rec_school1').value, from: document.getElementById('rec_from1').value, to: document.getElementById('rec_to1').value },
+    career2: { school: document.getElementById('rec_school2').value, from: document.getElementById('rec_from2').value, to: document.getElementById('rec_to2').value },
+    career3: { school: document.getElementById('rec_school3').value, from: document.getElementById('rec_from3').value, to: document.getElementById('rec_to3').value },
+  };
+  openRecommendPrint(rec, data);
+}
+
+function openRecommendPrint(rec, data) {
+  const year = data.evalYear || '2026';
+  const principal = data.principalName || '';
+  const specialLabels = {
+    '1': '☑ 1. 미경력확인서 제출로 채용된 후 인력풀 등재 신청<br>□ 2. (유효기간 내) 인력풀 등재기간 연장<br>□ 3. 1, 2번 외의 사유로 인력풀 등재 신청',
+    '2': '□ 1. 미경력확인서 제출로 채용된 후 인력풀 등재 신청<br>☑ 2. (유효기간 내) 인력풀 등재기간 연장<br>□ 3. 1, 2번 외의 사유로 인력풀 등재 신청',
+    '3': '□ 1. 미경력확인서 제출로 채용된 후 인력풀 등재 신청<br>□ 2. (유효기간 내) 인력풀 등재기간 연장<br>☑ 3. 1, 2번 외의 사유로 인력풀 등재 신청',
+    '': '□ 1. 미경력확인서 제출로 채용된 후 인력풀 등재 신청<br>□ 2. (유효기간 내) 인력풀 등재기간 연장<br>□ 3. 1, 2번 외의 사유로 인력풀 등재 신청',
+  };
+  const careerRows = [1,2,3].map(n => {
+    const c = rec['career'+n] || {};
+    return `<tr>
+      <td>${c.school || ''}</td>
+      <td>${c.from || ''}</td>
+      <td>${c.to || ''}</td>
+      <td>기간제교원</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<title>기간제교원 인력풀 등록 대상자 추천서</title>
+<style>
+  @page { size: A4; margin: 15mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: '맑은 고딕','Malgun Gothic',sans-serif; font-size: 10pt; }
+  h1 { text-align:center; font-size:15pt; font-weight:bold; margin:10px 0 4px; letter-spacing:1px; }
+  .subtitle { text-align:center; font-size:9pt; color:#555; margin-bottom:14px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+  th,td { border:1px solid #000; padding:5px 8px; font-size:9.5pt; vertical-align:middle; }
+  th { background:#f2f2f2; text-align:center; font-weight:bold; }
+  .lbl { background:#f2f2f2; font-weight:bold; text-align:center; white-space:nowrap; }
+  .section-title { font-weight:bold; font-size:10pt; margin:10px 0 4px; }
+  .note { font-size:8.5pt; color:#555; margin:4px 0; }
+  .footer-text { font-size:9.5pt; margin-top:12px; text-align:center; }
+  .sign-row { font-size:10pt; margin-top:8px; }
+  .print-btn { display:block;margin:16px auto 0;padding:10px 32px;background:#1a5276;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit; }
+  @media print { .print-btn { display:none; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head><body>
+<div style="text-align:right;font-size:9pt;margin-bottom:6px">【붙임 5】</div>
+<h1>기간제교원 인력풀 등록 대상자 추천서</h1>
+<div class="subtitle">소속: 전주기전여자고등학교 &nbsp;&nbsp; 직위: 학교(부서)장 &nbsp;&nbsp; 성명: ${principal} &nbsp;&nbsp; (서명)</div>
+
+<table>
+  <tr>
+    <td class="lbl" width="80">임용과목</td>
+    <td colspan="3">${rec.subject || ''}</td>
+  </tr>
+  <tr>
+    <td class="lbl">소지자격<br>(표시과목)</td>
+    <td colspan="3">${rec.cert || ''}</td>
+  </tr>
+</table>
+
+<div class="section-title">■ 인적사항</div>
+<table>
+  <tr>
+    <td class="lbl" width="70">성명</td><td width="120">${rec.teacherName}</td>
+    <td class="lbl" width="50">성별</td><td width="60">${rec.gender || ''}</td>
+    <td class="lbl" width="70">생년월일</td><td>${rec.birth || ''}</td>
+  </tr>
+  <tr>
+    <td class="lbl">생활근거지</td>
+    <td colspan="5">${rec.address || ''} <span style="font-size:8pt;color:#555">(※ 구와 동까지만 기입)</span></td>
+  </tr>
+  <tr>
+    <td class="lbl">특이사항</td>
+    <td colspan="5" style="line-height:1.8">${specialLabels[rec.special || '']}</td>
+  </tr>
+  <tr>
+    <td class="lbl">연락처<br>(핸드폰)</td>
+    <td colspan="5">☎ ${rec.phone || ''}</td>
+  </tr>
+</table>
+
+<div class="section-title">■ 교육경력 <span style="font-size:8.5pt;font-weight:normal">(추천일 기준 기간제교원 총 경력)</span></div>
+<table>
+  <tr><td style="text-align:center">${rec.expY || ''}년 &nbsp;&nbsp; / &nbsp;&nbsp; ${rec.expM || ''}월</td></tr>
+</table>
+
+<div class="section-title">■ 인사위원회 심사</div>
+<table>
+  <tr>
+    <td class="lbl" width="100">심사 여부</td>
+    <td>${rec.review || ''} &nbsp;<span style="font-size:8.5pt;color:#555">(필수 작성: O / X)</span></td>
+  </tr>
+  <tr>
+    <td class="lbl">내부결재<br>공문번호</td>
+    <td>${rec.docnum || ''} &nbsp;<span style="font-size:8.5pt;color:#555">(위원회 소집 내부결재 공문대호, 필수 기재)</span></td>
+  </tr>
+</table>
+
+<div class="section-title">■ 기간제교원 경력 <span style="font-size:8.5pt;font-weight:normal">(최대 3곳, 기간제교원 경력만 작성)</span></div>
+<table>
+  <thead><tr>
+    <th>학교명 (추천학교 포함한 최근근무교)</th>
+    <th>근무기간 (부터)</th>
+    <th>근무기간 (까지)</th>
+    <th>비고</th>
+  </tr></thead>
+  <tbody>${careerRows}</tbody>
+</table>
+
+<div class="note">1. 보건교사, 영양교사, 전문상담교사는 학교급이 없음 (예: 보건교사 1, 2급)</div>
+<div class="note">2. 전북특별자치도교육청 기간제교사 인력풀 사이트에 해당 기간제교원 본인이 정보를 등록하도록 안내 바랍니다.</div>
+
+<div class="footer-text">위 기간제교원은 근무평가결과 적격자로서(60점 이상), 인력풀 등재 승인을 요청합니다.</div>
+<div class="footer-text" style="margin-top:16px">${year} &nbsp;&nbsp; 년 &nbsp;&nbsp;&nbsp;&nbsp; 월 &nbsp;&nbsp;&nbsp;&nbsp; 일</div>
+<div class="footer-text" style="margin-top:8px">추천자 &nbsp;&nbsp; 전주기전여자고등학교장 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 전북특별자치도교육감 귀하</div>
+
+<button class="print-btn" onclick="window.print()">🖨 인쇄</button>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=820,height=1000');
+  win.document.write(html);
+  win.document.close();
+}
+
+// ==================== 비밀번호 변경 (교사용 모달 연동) ====================
 function changePw() {
   const p1 = document.getElementById('newPw1').value;
   const p2 = document.getElementById('newPw2').value;
