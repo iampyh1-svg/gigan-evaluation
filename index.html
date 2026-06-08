@@ -567,6 +567,10 @@
         </div>
       </div>
       <div class="form-group">
+        <label>계약기간</label>
+        <input type="text" id="rec_contract" placeholder="예: 2026.03.01.-2027.02.29.">
+      </div>
+      <div class="form-group">
         <label>생활근거지 <span style="font-size:11px;color:var(--muted)">(구·동까지 기입)</span></label>
         <input type="text" id="rec_address" placeholder="예: 전북 전주시 완산구 효자동">
       </div>
@@ -1665,6 +1669,7 @@ function loadRecommendation() {
   document.getElementById('rec_name').value = currentUser;
   document.getElementById('rec_gender').value = rec.gender || '';
   document.getElementById('rec_birth').value = rec.birth || '';
+  document.getElementById('rec_contract').value = rec.contract || '';
   document.getElementById('rec_address').value = rec.address || '';
   document.getElementById('rec_phone').value = rec.phone || '';
   document.getElementById('rec_subject').value = rec.subject || (teacher ? teacher.subject : '') || '';
@@ -1698,6 +1703,7 @@ function saveRecommendation() {
     teacherName: currentUser,
     gender: document.getElementById('rec_gender').value,
     birth: document.getElementById('rec_birth').value,
+    contract: document.getElementById('rec_contract').value,
     address: document.getElementById('rec_address').value,
     phone: document.getElementById('rec_phone').value,
     subject: document.getElementById('rec_subject').value,
@@ -1754,6 +1760,7 @@ function printRecommendation() {
     teacherName: currentUser,
     gender: document.getElementById('rec_gender').value,
     birth: document.getElementById('rec_birth').value,
+    contract: document.getElementById('rec_contract').value,
     address: document.getElementById('rec_address').value,
     phone: document.getElementById('rec_phone').value,
     subject: document.getElementById('rec_subject').value,
@@ -1830,6 +1837,10 @@ function openRecommendPrint(rec, data) {
     <td class="lbl" width="70">성명</td><td width="120">${rec.teacherName}</td>
     <td class="lbl" width="50">성별</td><td width="60">${rec.gender || ''}</td>
     <td class="lbl" width="70">생년월일</td><td>${rec.birth || ''}</td>
+  </tr>
+  <tr>
+    <td class="lbl">계약기간</td>
+    <td colspan="5">${rec.contract || ''}</td>
   </tr>
   <tr>
     <td class="lbl">생활근거지</td>
