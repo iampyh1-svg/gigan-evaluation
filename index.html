@@ -605,6 +605,7 @@
       </div>
 
       <div class="divider"></div>
+      <div id="rec_review_section" style="display:none">
       <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--primary)">인사위원회 심사</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
         <div class="form-group">
@@ -620,6 +621,7 @@
           <input type="text" id="rec_docnum" placeholder="예: ○○고-100(2025. 12. 1.)">
         </div>
       </div>
+      </div><!-- /rec_review_section -->
 
       <div class="divider"></div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--primary)">기간제교원 경력 <span style="font-size:12px;font-weight:400;color:var(--muted)">(최대 3곳, 기간제교원 경력만)</span></div>
@@ -679,7 +681,7 @@
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
         <button class="btn btn-primary" style="flex:2" onclick="saveRecommendation()">💾 저장</button>
-        <button class="btn" style="flex:2;background:#6c757d;color:white" onclick="printRecommendation()">🖨 출력</button>
+        <button id="rec_print_btn" class="btn" style="flex:2;background:#6c757d;color:white;display:none" onclick="printRecommendation()">🖨 출력</button>
       </div>
     </div>
   </div>
@@ -1637,6 +1639,10 @@ function loadRecommendation() {
   document.getElementById('rec_exp_m').value = rec.expM || '';
   document.getElementById('rec_review').value = rec.review || '';
   document.getElementById('rec_docnum').value = rec.docnum || '';
+  // 관리자만 심사 항목·출력 버튼 표시
+  const adminOnly = isAdmin;
+  document.getElementById('rec_review_section').style.display = adminOnly ? 'block' : 'none';
+  document.getElementById('rec_print_btn').style.display     = adminOnly ? 'inline-block' : 'none';
   if (rec.special) {
     const radio = document.querySelector(`input[name="rec_special"][value="${rec.special}"]`);
     if (radio) radio.checked = true;
