@@ -430,12 +430,12 @@
       <div class="school">전주기전여자고등학교<br>기간제교원 근무평가</div>
 
       <div id="loginTabs" class="tab-bar" style="margin-bottom:24px">
-        <button class="tab-btn active" onclick="switchLoginTab('evaluator')">인사위원</button>
-        <button class="tab-btn" onclick="switchLoginTab('teacher')">기간제 교사</button>
+        <button class="tab-btn active" onclick="switchLoginTab('teacher')">기간제 교사</button>
+        <button class="tab-btn" onclick="switchLoginTab('evaluator')">인사위원</button>
         <button class="tab-btn" onclick="switchLoginTab('admin')">관리자</button>
       </div>
 
-      <div id="loginEvaluator">
+      <div id="loginEvaluator" style="display:none">
         <div class="form-group">
           <label>이름 선택</label>
           <select id="loginName" onchange="document.getElementById('loginPw').focus()">
@@ -450,7 +450,7 @@
         <button class="btn btn-primary btn-full" onclick="doLogin()">평가 시작</button>
       </div>
 
-      <div id="loginTeacher" style="display:none">
+      <div id="loginTeacher">
         <div class="form-group">
           <label>이름 선택</label>
           <select id="teacherLoginName" onchange="document.getElementById('teacherLoginPw').focus()">
@@ -928,7 +928,7 @@ function saveEvaluators(list) { localStorage.setItem('kj_evaluators', JSON.strin
 function saveEvals(list) { localStorage.setItem('kj_evals', JSON.stringify(list)); }
 function saveRecommendations(list) { localStorage.setItem('kj_recommendations', JSON.stringify(list)); }
 
-window.addEventListener('DOMContentLoaded', populateLoginSelect);
+window.addEventListener('DOMContentLoaded', () => { populateLoginSelect(); populateTeacherLoginSelect(); });
 
 // Init default teachers
 if (!localStorage.getItem('kj_teachers')) {
@@ -948,7 +948,7 @@ let currentTeacher = null;
 let currentTeacherObj = null; // 기간제 교사 로그인용
 let scores = [0, 0, 0, 0, 0];
 let currentAdminTab = 'summary';
-let currentLoginTab = 'evaluator';
+let currentLoginTab = 'teacher';
 
 // ==================== ROUTING ====================
 function showPage(id) {
@@ -1052,7 +1052,7 @@ function populateLoginSelect() {
 
 function switchLoginTab(tab) {
   currentLoginTab = tab;
-  const tabs = ['evaluator','teacher','admin'];
+  const tabs = ['teacher','evaluator','admin'];
   document.querySelectorAll('#loginTabs .tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === tab);
   });
