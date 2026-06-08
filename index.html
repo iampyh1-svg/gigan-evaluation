@@ -364,6 +364,20 @@
 
   .progress-bar-wrap { background: #e9ecef; border-radius: 10px; height: 8px; margin-top: 4px; }
   .progress-bar { height: 8px; border-radius: 10px; background: var(--primary); transition: width 0.3s; }
+
+  .btn-print-small {
+    background: white;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .btn-print-small:hover { background: #f0f7ff; }
 </style>
 </head>
 <body>
@@ -638,6 +652,37 @@ const CRITERIA = [
   '직원간의 화합'
 ];
 
+const SUB_ITEMS = [
+  [
+    '교원의 사명과 직무에 책임과 긍지를 지니고 있는가?',
+    '교원으로서의 청렴한 생활태도와 예의를 갖추었는가?',
+    '학생에 대한 이해와 사랑을 바탕으로 교육에 헌신하는가?',
+    '학부모ㆍ학생으로부터 신뢰와 존경을 받는가?',
+  ],
+  [
+    '교육에 대한 올바른 신념을 가지고 있는가?',
+    '전문성 신장을 위한 연구ㆍ연수활동에 적극적인가?',
+    '담당업무를 정확하고 합리적으로 처리하는가?',
+  ],
+  [
+    '수업연구 및 준비에 최선을 다 하는가?',
+    '수업방법의 개선 노력과 학습지도에 열의가 있는가?',
+    '교육과정을 창의적으로 구성하며 교재를 효율적으로 활용하는가?',
+    '평가계획이 적절하고, 평가결과를 효율적으로 활용하는가?',
+  ],
+  [
+    '학생의 인성 교육 및 진로지도에 열의가 있는가?',
+    '학교행사 및 교내 생활지도에 최선을 다하는가?',
+    '학생의 심리, 고민 등을 이해하기 위해 노력하고 적절히 지도하는가?',
+    '교육활동에 있어 학생 개개인의 건강ㆍ안전지도 등에 충분한 배려를 하는가?',
+  ],
+  [
+    '자발적ㆍ적극적으로 직무를 수행하는가?',
+    '직원간 화합을 위해 노력하는가?',
+    '교직원 간에 협조적이며 솔선수범 하는가?',
+  ],
+];
+
 const GRADES = [
   { label: '매우우수', min: 17, max: 20 },
   { label: '우수',     min: 13, max: 16 },
@@ -845,12 +890,18 @@ function renderTeacherList() {
     const statusHtml = myEval
       ? `<span class="eval-status status-done">평가완료 ${myEval.total}점</span>`
       : `<span class="eval-status status-pending">미평가</span>`;
+    const printBtn = myEval
+      ? `<button class="btn-print-small" onclick="event.stopPropagation();printEval(${t.id})" title="평가서 출력">🖨 출력</button>`
+      : '';
     return `<div class="teacher-item" onclick="selectTeacher(${t.id})">
       <div>
         <div class="name">${t.name}</div>
         <div class="subject">${t.subject || ''}</div>
       </div>
-      ${statusHtml}
+      <div style="display:flex;align-items:center;gap:8px">
+        ${printBtn}
+        ${statusHtml}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1314,6 +1365,143 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeChangePwModal();
 });
+
+// ==================== 평가서 출력 ====================
+function printEval(teacherId) {
+  const data = loadData();
+  const teacher = data.teachers.find(t => t.id === teacherId);
+  const ev = data.evals.find(e => e.evaluatorName === currentUser && e.teacherId === teacherId);
+  if (!teacher || !ev) return;
+
+  const gradeLabel = (score) => {
+    if (score >= 17) return '매우우수';
+    if (score >= 13) return '우수';
+    if (score >= 9)  return '보통';
+    if (score >= 5)  return '미흡';
+    if (score >= 1)  return '매우미흡';
+    return '-';
+  };
+
+  const scoreCell = (score, colGrade) => {
+    const g = gradeLabel(score);
+    return g === colGrade ? `<td class="score-col score-checked">${score}</td>` : `<td class="score-col"></td>`;
+  };
+
+  const criteriaRows = CRITERIA.map((name, ci) => {
+    const score = ev.scores[ci] || 0;
+    const subs = SUB_ITEMS[ci];
+    const grades = ['매우우수','우수','보통','미흡','매우미흡'];
+    let html = `<tr>
+      <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
+      <td class="criteria-name" rowspan="${subs.length}">${name}</td>
+      <td class="sub-item">${subs[0]}</td>
+      ${grades.map(g => scoreCell(score, g)).join('')}
+    </tr>`;
+    for (let i = 1; i < subs.length; i++) {
+      html += `<tr><td class="sub-item">${subs[i]}</td>${grades.map(() => '<td class="score-col"></td>').join('')}</tr>`;
+    }
+    if (ci === 2) {
+      html += `<tr><td colspan="7" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능</td></tr>`;
+    }
+    return html;
+  }).join('');
+
+  const year = data.evalYear || '2026';
+  const evaluator = data.evaluators.find(e => e.name === currentUser);
+  const evalRole = evaluator?.role || '교사';
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>기간제교원 근무 평가서</title>
+<style>
+  @page { size: A4; margin: 15mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 10pt; color: #000; }
+  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 70px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 4px 6px; font-size: 9.5pt; vertical-align: middle; }
+  .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
+  .num-cell { text-align: center; width: 24px; font-weight: bold; }
+  .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
+  .sub-item { font-size: 9pt; }
+  .score-col { text-align: center; width: 48px; font-weight: bold; font-size: 10pt; }
+  .score-checked { background: #e8f4fd; color: #1a5276; font-weight: bold; }
+  .total-row td { font-weight: bold; background: #f9f9f9; }
+  .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
+  .legend { font-size: 9pt; margin-bottom: 8px; }
+  .sign-row { font-size: 10pt; margin-top: 10px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none; }
+  }
+  .print-btn {
+    display: block; margin: 16px auto 0; padding: 10px 32px;
+    background: #1a5276; color: white; border: none; border-radius: 8px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<h1>기간제교원 근무 평가서(평가위원용)</h1>
+
+<table class="info-table">
+  <tr>
+    <td class="lbl">학교명</td>
+    <td colspan="3">전주기전여자고등학교</td>
+    <td class="lbl">성명</td>
+    <td>${teacher.name}</td>
+    <td class="lbl">담당과목</td>
+    <td>${teacher.subject || ''}</td>
+  </tr>
+  <tr>
+    <td class="lbl">계약기간</td>
+    <td colspan="3">${year}.03.01. ~ ${parseInt(year)+1}.02.28.</td>
+    <td class="lbl">성별</td>
+    <td></td>
+    <td class="lbl">생년월일</td>
+    <td></td>
+  </tr>
+</table>
+
+<table class="main-table">
+  <thead>
+    <tr>
+      <th>순</th>
+      <th colspan="2">평 가 요 소</th>
+      <th>매우우수<br><span style="font-weight:normal;font-size:8pt">(17~20점)</span></th>
+      <th>우수<br><span style="font-weight:normal;font-size:8pt">(13~16점)</span></th>
+      <th>보통<br><span style="font-weight:normal;font-size:8pt">(9~12점)</span></th>
+      <th>미흡<br><span style="font-weight:normal;font-size:8pt">(5~8점)</span></th>
+      <th>매우미흡<br><span style="font-weight:normal;font-size:8pt">(1~4점)</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    ${criteriaRows}
+    <tr class="total-row">
+      <td colspan="3" style="text-align:center;font-weight:bold">총 점 (합계)</td>
+      <td colspan="5" style="text-align:center;font-size:13pt">${ev.total}점 &nbsp;
+        <span style="font-size:10pt;font-weight:normal">(${gradeLabel(ev.total)})</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
+<div class="sign-row">평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${currentUser} &nbsp;&nbsp;&nbsp; (서명)</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write(html);
+  win.document.close();
+}
 
 // ==================== EXCEL EXPORT ====================
 function exportExcel() {
