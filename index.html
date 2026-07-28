@@ -1014,7 +1014,49 @@ window.addEventListener('DOMContentLoaded', async () => {
   await refreshSettings();
   populateLoginSelect();
   populateTeacherLoginSelect();
+  await restoreSession();
 });
+
+async function restoreSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+
+  const profile = appData._profileById?.[session.user.id];
+  if (!profile || !profile.role) {
+    await sb.auth.signOut();
+    return;
+  }
+
+  await refreshEvals();
+  await refreshRecommendations();
+  document.getElementById('adminBtn').style.display = 'none';
+
+  if (profile.role === 'admin') {
+    currentUser = '관리자';
+    isAdmin = true;
+    currentUserType = 'admin';
+    document.getElementById('headerUser').textContent = '관리자';
+    document.getElementById('changePwBtn').style.display = 'none';
+    renderAdmin();
+    showPage('pageAdmin');
+  } else if (profile.role === 'teacher') {
+    currentUser = profile.name;
+    isAdmin = false;
+    currentUserType = 'teacher';
+    currentTeacherObj = appData.teachers.find(t => t.id === profile.id);
+    document.getElementById('headerUser').textContent = profile.name + ' 선생님';
+    document.getElementById('changePwBtn').style.display = 'inline-block';
+    loadRecommendation();
+    showPage('pageTeacherHome');
+  } else if (profile.role === 'evaluator') {
+    currentUser = profile.name;
+    isAdmin = false;
+    currentUserType = 'evaluator';
+    document.getElementById('headerUser').textContent = profile.name + ' 위원';
+    document.getElementById('changePwBtn').style.display = 'inline-block';
+    goSelectTeacher();
+  }
+}
 
 // ==================== STATE ====================
 let currentUser = null;
