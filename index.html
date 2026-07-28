@@ -967,6 +967,23 @@ function buildContractValue() {
   return computeFixedContract(appData.evalYear);
 }
 
+// 기간제교원 경력 3곳의 근무기간이 서로 겹치는지 확인 (동시에 두 학교 근무는 불가능)
+function findOverlappingCareerDates() {
+  const ranges = [1, 2, 3].map(n => ({
+    n,
+    from: document.getElementById('rec_from' + n).value,
+    to: document.getElementById('rec_to' + n).value,
+  })).filter(r => r.from && r.to);
+
+  for (let i = 0; i < ranges.length; i++) {
+    for (let j = i + 1; j < ranges.length; j++) {
+      const a = ranges[i], b = ranges[j];
+      if (a.from <= b.to && b.from <= a.to) return [a.n, b.n];
+    }
+  }
+  return null;
+}
+
 // ==================== SUPABASE ====================
 const SUPABASE_URL = 'https://ozniwqtqclgwpiotywhl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bml3cXRxY2xnd3Bpb3R5d2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDIzOTYsImV4cCI6MjEwMDcxODM5Nn0.3AAYjJWbb85pGtqIIbMZgptJRP0syvkWv4ILa_onvKo';
@@ -1872,6 +1889,11 @@ function loadRecommendation() {
 
 async function saveRecommendation() {
   if (!currentTeacherObj) { alert('교사 정보를 확인할 수 없습니다.'); return; }
+  const overlap = findOverlappingCareerDates();
+  if (overlap) {
+    alert(`${overlap[0]}번째와 ${overlap[1]}번째 근무교의 근무기간이 겹칩니다.\n같은 시기에 두 학교에서 근무할 수 없으니 날짜를 다시 확인해주세요.`);
+    return;
+  }
   const special = document.querySelector('input[name="rec_special"]:checked');
   const { error } = await sb.from('recommendations').upsert({
     teacher_id: currentTeacherObj.id,
