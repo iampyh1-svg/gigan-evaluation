@@ -746,7 +746,6 @@
           <div id="teacherMgmtList" class="teacher-mgmt"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
-            <input type="text" id="newTeacherSubject" placeholder="담당과목 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
             <button class="btn btn-primary" onclick="addTeacher()" style="white-space:nowrap">추가</button>
           </div>
         </div>
@@ -1593,14 +1592,12 @@ function renderTeacherMgmt(data) {
 
 async function addTeacher() {
   const name = document.getElementById('newTeacherName').value.trim();
-  const subject = document.getElementById('newTeacherSubject').value.trim();
   if (!name) { alert('교사 이름을 입력하세요.'); return; }
   const { data, error } = await sb.functions.invoke('admin-create-user', {
-    body: { name, role: 'teacher', subject },
+    body: { name, role: 'teacher' },
   });
   if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newTeacherName').value = '';
-  document.getElementById('newTeacherSubject').value = '';
   await refreshProfiles();
   renderTeacherMgmt(loadData());
 }
