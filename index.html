@@ -781,7 +781,6 @@
           <div id="evaluatorMgmtList" class="teacher-mgmt"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input type="text" id="newEvaluatorName" placeholder="인사위원 이름" style="flex:1;font-size:13px;padding:8px 10px" onkeydown="if(event.key==='Enter')addEvaluator()">
-            <input type="text" id="newEvaluatorRole" placeholder="직위 (선택)" style="width:130px;font-size:13px;padding:8px 10px">
             <button class="btn btn-primary" onclick="addEvaluator()" style="white-space:nowrap">추가</button>
           </div>
         </div>
@@ -1609,7 +1608,6 @@ function renderEvaluatorMgmt(data) {
   el.innerHTML = data.evaluators.map(ev => `
     <div class="teacher-row">
       <input type="text" value="${ev.name}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'name', this.value)" placeholder="이름">
-      <input type="text" value="${ev.role || ''}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'role', this.value)" placeholder="직위 (선택)">
       <button class="btn-icon" onclick="removeEvaluator('${ev.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
@@ -1677,15 +1675,13 @@ async function resetEvaluatorPw(id) {
 
 async function addEvaluator() {
   const name = document.getElementById('newEvaluatorName').value.trim();
-  const role = document.getElementById('newEvaluatorRole').value.trim();
   if (!name) { alert('인사위원 이름을 입력하세요.'); return; }
   if (appData.evaluators.find(ev => ev.name === name)) { alert('이미 등록된 이름입니다.'); return; }
   const { data, error } = await sb.functions.invoke('admin-create-user', {
-    body: { name, role: 'evaluator', committee_role: role },
+    body: { name, role: 'evaluator', committee_role: '교사' },
   });
   if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newEvaluatorName').value = '';
-  document.getElementById('newEvaluatorRole').value = '';
   await refreshProfiles();
   renderEvaluatorMgmt(loadData());
 }
