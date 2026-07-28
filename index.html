@@ -438,12 +438,6 @@
 
       <div id="loginEvaluator" style="display:none">
         <div class="form-group">
-          <label>이름 선택</label>
-          <select id="loginName" onchange="document.getElementById('loginPw').focus()">
-            <option value="">-- 이름을 선택하세요 --</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>비밀번호</label>
           <input type="password" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
@@ -777,10 +771,11 @@
       <div id="evTabContentList">
         <div class="card">
           <h2>인사위원 명단 관리</h2>
-          <div class="desc">평가에 참여하는 인사위원을 등록하세요. 새로 추가된 위원의 초기 비밀번호는 <strong>kijun1234!</strong> 입니다.</div>
+          <div class="desc">인사위원은 로그인 화면에서 이름 없이 <strong>비밀번호만으로</strong> 식별되므로, 위원마다 서로 다른 비밀번호를 지정해서 개별로 전달해주세요.</div>
           <div id="evaluatorMgmtList" class="teacher-mgmt"></div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <input type="text" id="newEvaluatorName" placeholder="인사위원 이름" style="flex:1;font-size:13px;padding:8px 10px" onkeydown="if(event.key==='Enter')addEvaluator()">
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <input type="text" id="newEvaluatorName" placeholder="인사위원 이름" style="flex:1;min-width:120px;font-size:13px;padding:8px 10px">
+            <input type="password" id="newEvaluatorPw" placeholder="초기 비밀번호 (개별 지정, 필수)" style="flex:1;min-width:160px;font-size:13px;padding:8px 10px" onkeydown="if(event.key==='Enter')addEvaluator()">
             <button class="btn btn-primary" onclick="addEvaluator()" style="white-space:nowrap">추가</button>
           </div>
         </div>
@@ -1012,7 +1007,6 @@ async function refreshAll() {
 window.addEventListener('DOMContentLoaded', async () => {
   await refreshProfiles();
   await refreshSettings();
-  populateLoginSelect();
   populateTeacherLoginSelect();
   await restoreSession();
 });
@@ -1083,7 +1077,6 @@ async function logout() {
   currentUserType = null;
   currentTeacherObj = null;
   showPage('pageLogin');
-  populateLoginSelect();
   document.getElementById('teacherLoginPw').value = '';
   document.getElementById('loginPw').value = '';
   document.getElementById('adminPw').value = '';
@@ -1144,20 +1137,6 @@ function goSelectTeacher() {
 }
 
 // ==================== LOGIN ====================
-function populateLoginSelect() {
-  const data = loadData();
-  const sel = document.getElementById('loginName');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- 이름을 선택하세요 --</option>';
-  data.evaluators.forEach(ev => {
-    const opt = document.createElement('option');
-    opt.value = ev.name;
-    opt.textContent = ev.name + (ev.role ? ' (' + ev.role + ')' : '');
-    if (ev.name === cur) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
 function switchLoginTab(tab) {
   currentLoginTab = tab;
   const tabs = ['teacher','evaluator','admin'];
@@ -1167,7 +1146,6 @@ function switchLoginTab(tab) {
   document.getElementById('loginEvaluator').style.display = tab === 'evaluator' ? 'block' : 'none';
   document.getElementById('loginTeacher').style.display  = tab === 'teacher'   ? 'block' : 'none';
   document.getElementById('loginAdmin').style.display    = tab === 'admin'     ? 'block' : 'none';
-  if (tab === 'evaluator') populateLoginSelect();
   if (tab === 'teacher')   populateTeacherLoginSelect();
 }
 
@@ -1210,22 +1188,24 @@ async function doTeacherLogin() {
 }
 
 async function doLogin() {
-  const name = document.getElementById('loginName').value.trim();
   const pw = document.getElementById('loginPw').value;
   const err = document.getElementById('loginError');
-  if (!name) { err.textContent = '이름을 선택하세요.'; err.style.display = 'block'; return; }
   if (!pw) { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
-  const profile = findProfileByNameAndRole(name, 'evaluator');
-  if (!profile) { err.textContent = '등록되지 않은 이름입니다. 관리자에게 문의하세요.'; err.style.display = 'block'; return; }
-  const { error: authErr } = await sb.auth.signInWithPassword({ email: profile.email, password: pw });
+  const { data: matches, error: lookupErr } = await sb.rpc('find_login_by_password', { pw, target_role: 'evaluator' });
+  if (lookupErr || !matches || matches.length === 0) {
+    err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return;
+  }
+  const match = matches[0];
+  const { error: authErr } = await sb.auth.signInWithPassword({ email: match.email, password: pw });
   if (authErr) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
   await refreshEvals();
   await refreshRecommendations();
-  currentUser = name;
+  const profile = appData._profileById[match.id];
+  currentUser = profile.name;
   isAdmin = false;
   currentUserType = 'evaluator';
-  document.getElementById('headerUser').textContent = name + ' 위원';
+  document.getElementById('headerUser').textContent = profile.name + ' 위원';
   document.getElementById('adminBtn').style.display = 'none';
   document.getElementById('changePwBtn').style.display = 'inline-block';
   goSelectTeacher();
@@ -1672,9 +1652,8 @@ function renderEvaluatorPwList(data) {
   el.innerHTML = data.evaluators.map(ev => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
       <div style="min-width:90px;font-weight:600;font-size:14px">${ev.name}${ev.role ? ' <span style="font-size:12px;color:var(--muted);font-weight:400">('+ev.role+')</span>' : ''}</div>
-      <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw('${ev.id}')">
+      <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호 (다른 위원과 겹치지 않게)" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw('${ev.id}')">
       <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setEvaluatorPw('${ev.id}')">변경</button>
-      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetEvaluatorPw('${ev.id}')">초기화</button>
     </div>
   `).join('');
 }
@@ -1694,6 +1673,11 @@ async function setEvaluatorPw(id) {
   if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
   const ev = appData.evaluators.find(e => e.id === id);
   if (!ev) return;
+  const { data: dup } = await sb.rpc('find_login_by_password', { pw: newPw, target_role: 'evaluator' });
+  if (dup && dup.length > 0 && dup[0].id !== id) {
+    alert('이미 다른 위원이 사용 중인 비밀번호입니다. 다른 비밀번호를 입력해주세요.');
+    return;
+  }
   try {
     await callResetPassword(id, newPw);
     input.value = '';
@@ -1703,27 +1687,25 @@ async function setEvaluatorPw(id) {
   }
 }
 
-async function resetEvaluatorPw(id) {
-  const ev = appData.evaluators.find(e => e.id === id);
-  if (!ev) return;
-  if (!confirm(`${ev.name} 위원의 비밀번호를 초기값(kijun1234!)으로 초기화하시겠습니까?`)) return;
-  try {
-    await callResetPassword(id);
-    alert(`${ev.name} 위원의 비밀번호가 초기화되었습니다.`);
-  } catch (e) {
-    alert('초기화 실패: ' + e.message);
-  }
-}
-
 async function addEvaluator() {
   const name = document.getElementById('newEvaluatorName').value.trim();
+  const pw = document.getElementById('newEvaluatorPw').value;
   if (!name) { alert('인사위원 이름을 입력하세요.'); return; }
+  if (!pw) { alert('로그인 화면에서 비밀번호만으로 위원을 구분하므로, 초기 비밀번호를 반드시 입력해야 합니다.'); return; }
   if (appData.evaluators.find(ev => ev.name === name)) { alert('이미 등록된 이름입니다.'); return; }
+
+  const { data: dup } = await sb.rpc('find_login_by_password', { pw, target_role: 'evaluator' });
+  if (dup && dup.length > 0) {
+    alert('이미 다른 위원이 사용 중인 비밀번호입니다. 다른 비밀번호를 입력해주세요.');
+    return;
+  }
+
   const { data, error } = await sb.functions.invoke('admin-create-user', {
-    body: { name, role: 'evaluator', committee_role: '교사' },
+    body: { name, role: 'evaluator', committee_role: '교사', password: pw },
   });
   if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newEvaluatorName').value = '';
+  document.getElementById('newEvaluatorPw').value = '';
   await refreshProfiles();
   renderEvaluatorMgmt(loadData());
 }
