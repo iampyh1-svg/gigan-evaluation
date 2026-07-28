@@ -1971,19 +1971,34 @@ function renderRecommendTable(data) {
     const statusBadge = r.submitted
       ? '<span class="grade-badge gb-우수">제출완료</span>'
       : '<span class="grade-badge gb-미흡">임시저장</span>';
+    const cancelBtn = r.submitted
+      ? `<button class="btn-print-small" style="background:var(--accent)" onclick="cancelRecommendationSubmit('${r.teacherId}', '${r.teacherName}')">제출 취소</button>`
+      : '';
     return `<tr>
       <td class="td-name">${r.teacherName}</td>
       <td>${r.subject || '-'}</td>
       <td>${statusBadge}</td>
       <td>${r.review || '-'}</td>
       <td>${dt}</td>
-      <td><button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherName}')">🖨 출력</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherName}')">🖨 출력</button>
+        ${cancelBtn}
+      </td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table>
     <thead><tr><th>교사명</th><th>임용과목</th><th>상태</th><th>심사여부</th><th>작성일시</th><th>출력</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+async function cancelRecommendationSubmit(teacherId, teacherName) {
+  if (!confirm(`${teacherName} 선생님의 제출을 취소하고 다시 수정할 수 있게 하시겠습니까?`)) return;
+  const { error } = await sb.from('recommendations').update({ submitted: false }).eq('teacher_id', teacherId);
+  if (error) { alert('취소 실패: ' + error.message); return; }
+  await refreshRecommendations();
+  renderRecommendTable(loadData());
+  alert('제출이 취소되었습니다. 이제 본인이 다시 수정할 수 있습니다.');
 }
 
 function printRecommendAdmin(teacherName) {
