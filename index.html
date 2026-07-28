@@ -625,10 +625,6 @@
             <option value="X">X (미통과)</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>내부결재 공문번호 <span style="font-size:11px;color:var(--muted)">(필수)</span></label>
-          <input type="text" id="rec_docnum" placeholder="예: ○○고-100(2025. 12. 1.)">
-        </div>
       </div>
       </div><!-- /rec_review_section -->
 
@@ -844,6 +840,10 @@
           <label>학교장 성명 <span style="font-size:11px;color:var(--muted)">(결과 출력 서류 확인자)</span></label>
           <input type="text" id="principalName" placeholder="학교장 성명 입력">
         </div>
+        <div class="form-group">
+          <label>인사위원회 심사 내부결재 공문번호</label>
+          <input type="text" id="committeeDocnum" placeholder="예: ○○고-100(2025. 12. 1.)">
+        </div>
         <button class="btn btn-primary" onclick="saveSettings()">저장</button>
         <div class="divider"></div>
         <div style="margin-bottom:12px">
@@ -980,6 +980,7 @@ let appData = {
   recommendations: [],
   evalYear: '2026',
   principalName: '',
+  committeeDocnum: '',
 };
 
 function loadData() { return appData; }
@@ -1044,6 +1045,7 @@ async function refreshSettings() {
   if (error) { console.error('app_settings 조회 실패', error); return; }
   appData.evalYear = data.eval_year || '2026';
   appData.principalName = data.principal_name || '';
+  appData.committeeDocnum = data.committee_docnum || '';
 }
 
 async function refreshAll() {
@@ -1439,6 +1441,7 @@ function renderAdmin() {
   const data = loadData();
   document.getElementById('evalYear').value = data.evalYear;
   document.getElementById('principalName').value = data.principalName || '';
+  document.getElementById('committeeDocnum').value = data.committeeDocnum || '';
   renderStats(data);
   renderSummaryTable(data);
   renderDetailFilters(data);
@@ -1849,7 +1852,6 @@ function loadRecommendation() {
   document.getElementById('rec_exp_y').value = rec.expY || '';
   document.getElementById('rec_exp_m').value = rec.expM || '';
   document.getElementById('rec_review').value = rec.review || '';
-  document.getElementById('rec_docnum').value = rec.docnum || '';
   // 관리자만 심사 항목·출력 버튼 표시
   const adminOnly = isAdmin;
   document.getElementById('rec_review_section').style.display = adminOnly ? 'block' : 'none';
@@ -1882,9 +1884,7 @@ async function saveRecommendation() {
     cert: document.getElementById('rec_cert').value,
     exp_y: document.getElementById('rec_exp_y').value,
     exp_m: document.getElementById('rec_exp_m').value,
-    review: document.getElementById('rec_review').value,
-    docnum: document.getElementById('rec_docnum').value,
-    special: special ? special.value : '',
+    review: document.getElementById('rec_review').value,    special: special ? special.value : '',
     career1: { school: document.getElementById('rec_school1').value, from: formatBirth(document.getElementById('rec_from1').value), to: formatBirth(document.getElementById('rec_to1').value) },
     career2: { school: document.getElementById('rec_school2').value, from: formatBirth(document.getElementById('rec_from2').value), to: formatBirth(document.getElementById('rec_to2').value) },
     career3: { school: document.getElementById('rec_school3').value, from: formatBirth(document.getElementById('rec_from3').value), to: formatBirth(document.getElementById('rec_to3').value) },
@@ -1937,9 +1937,7 @@ function printRecommendation() {
     cert: document.getElementById('rec_cert').value,
     expY: document.getElementById('rec_exp_y').value,
     expM: document.getElementById('rec_exp_m').value,
-    review: document.getElementById('rec_review').value,
-    docnum: document.getElementById('rec_docnum').value,
-    special: special ? special.value : '',
+    review: document.getElementById('rec_review').value,    special: special ? special.value : '',
     career1: { school: document.getElementById('rec_school1').value, from: formatBirth(document.getElementById('rec_from1').value), to: formatBirth(document.getElementById('rec_to1').value) },
     career2: { school: document.getElementById('rec_school2').value, from: formatBirth(document.getElementById('rec_from2').value), to: formatBirth(document.getElementById('rec_to2').value) },
     career3: { school: document.getElementById('rec_school3').value, from: formatBirth(document.getElementById('rec_from3').value), to: formatBirth(document.getElementById('rec_to3').value) },
@@ -2035,7 +2033,7 @@ function openRecommendPrint(rec, data) {
   </tr>
   <tr>
     <td class="lbl">내부결재<br>공문번호</td>
-    <td>${rec.docnum || ''} &nbsp;<span style="font-size:8.5pt;color:#555">(위원회 소집 내부결재 공문대호, 필수 기재)</span></td>
+    <td>${data.committeeDocnum || ''}</td>
   </tr>
 </table>
 
@@ -2082,8 +2080,9 @@ async function changePw() {
 async function saveSettings() {
   const year = document.getElementById('evalYear').value.trim();
   const principal = document.getElementById('principalName').value.trim();
+  const committeeDocnum = document.getElementById('committeeDocnum').value.trim();
   const { error } = await sb.from('app_settings')
-    .update({ eval_year: year || '2026', principal_name: principal })
+    .update({ eval_year: year || '2026', principal_name: principal, committee_docnum: committeeDocnum })
     .eq('id', 1);
   if (error) { alert('저장 실패: ' + error.message); return; }
   await refreshSettings();
