@@ -635,12 +635,12 @@
         <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">첫 번째 근무교</div>
         <div class="form-group" style="margin-bottom:10px">
           <label>학교명</label>
-          <input type="text" id="rec_school1" placeholder="학교명 입력">
+          <input type="text" id="rec_school1" value="전주기전여자고등학교" readonly style="background:#f5f5f5">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group" style="margin-bottom:0">
-            <label>근무 시작일 <span style="font-size:11px;color:var(--muted)">(계약기간과 동일)</span></label>
-            <input type="date" id="rec_from1" disabled style="background:#f5f5f5">
+            <label>근무 시작일 <span style="font-size:11px;color:var(--muted)">(기본값: 계약 시작일, 다년 계약이면 수정 가능)</span></label>
+            <input type="date" id="rec_from1">
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>근무 종료일 <span style="font-size:11px;color:var(--muted)">(계약기간과 동일)</span></label>
@@ -985,14 +985,16 @@ function syncFirstCareerFromContract() {
     start = range.start;
     end = range.end;
   }
-  document.getElementById('rec_from1').value = start || '';
+  // 근무 시작일은 다년 계약 등으로 교사가 직접 고친 값이 있으면 덮어쓰지 않고, 비어있을 때만 기본값으로 채운다
+  const fromEl = document.getElementById('rec_from1');
+  if (!fromEl.value) fromEl.value = start || '';
   document.getElementById('rec_to1').value = end || '';
 }
 
 // 제출 완료된 추천서는 본인이 다시 수정할 수 없도록 전체 입력을 잠근다
 function setRecommendationFormLocked(locked) {
   document.querySelectorAll('#pageTeacherHome input, #pageTeacherHome select').forEach(el => {
-    el.disabled = locked || (el.id === 'rec_from1' || el.id === 'rec_to1'); // 첫 번째 근무교 날짜는 원래도 항상 잠금
+    el.disabled = locked || el.id === 'rec_to1'; // 첫 번째 근무교 종료일은 원래도 항상 잠금
   });
   document.getElementById('rec_locked_notice').style.display = locked ? 'block' : 'none';
   document.getElementById('rec_reset_btn').style.display = locked ? 'none' : '';
@@ -1914,7 +1916,7 @@ function loadRecommendation() {
   }
   [1,2,3].forEach(n => {
     const c = rec['career'+n] || {};
-    document.getElementById('rec_school'+n).value = c.school || '';
+    document.getElementById('rec_school'+n).value = n === 1 ? '전주기전여자고등학교' : (c.school || '');
     document.getElementById('rec_from'+n).value = parseDotDate(c.from);
     document.getElementById('rec_to'+n).value = parseDotDate(c.to);
   });
