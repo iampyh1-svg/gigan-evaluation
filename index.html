@@ -923,7 +923,7 @@ function formatBirth(iso) {
   if (!iso) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso; // 예전 방식(자유 입력 텍스트)으로 저장된 데이터는 그대로 표시
-  return `${m[1]}. ${parseInt(m[2], 10)}. ${parseInt(m[3], 10)}.`;
+  return `${m[1]}.${m[2]}.${m[3]}.`;
 }
 
 // ==================== SUPABASE ====================
