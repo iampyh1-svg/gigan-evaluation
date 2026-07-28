@@ -561,9 +561,19 @@
           <input type="date" id="rec_birth">
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="contractFixedGroup">
         <label>계약기간</label>
-        <input type="text" id="rec_contract" placeholder="예: 2026.03.01.-2027.02.29.">
+        <input type="text" id="rec_contract_fixed" readonly style="background:#f5f5f5">
+      </div>
+      <div id="contractRangeGroup" style="display:none;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>계약 시작일</label>
+          <input type="date" id="rec_contract_start">
+        </div>
+        <div class="form-group">
+          <label>계약 종료일</label>
+          <input type="date" id="rec_contract_end">
+        </div>
       </div>
       <div class="form-group">
         <label>생활근거지 <span style="font-size:11px;color:var(--muted)">(구·동까지 기입)</span></label>
@@ -744,8 +754,11 @@
           <h2>기간제 교사 목록 관리</h2>
           <div class="desc">평가 대상 교사를 추가하거나 배정 해제할 수 있습니다. 추가 시 초기 비밀번호: <strong>kijun1234!</strong></div>
           <div id="teacherMgmtList" class="teacher-mgmt"></div>
-          <div style="display:flex;gap:8px;margin-top:12px">
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
             <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap">
+              <input type="checkbox" id="newTeacherShortTerm"> 단기 계약
+            </label>
             <button class="btn btn-primary" onclick="addTeacher()" style="white-space:nowrap">추가</button>
           </div>
         </div>
@@ -926,6 +939,28 @@ function formatBirth(iso) {
   return `${m[1]}.${m[2]}.${m[3]}.`;
 }
 
+function isLeapYear(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
+// 단기 계약이 아닌 교사의 고정 계약기간 (그 해 3.1. ~ 다음 해 2월 말일)
+function computeFixedContract(year) {
+  const y = parseInt(year, 10);
+  const feb = isLeapYear(y + 1) ? 29 : 28;
+  return `${y}.03.01.-${y + 1}.02.${String(feb).padStart(2, '0')}.`;
+}
+
+// 추천서 화면(입력 중)에서 현재 상태에 맞는 계약기간 문자열을 만든다
+function buildContractValue() {
+  if (currentTeacherObj && currentTeacherObj.isShortTerm) {
+    const start = document.getElementById('rec_contract_start').value;
+    const end = document.getElementById('rec_contract_end').value;
+    if (!start || !end) return '';
+    return `${formatBirth(start)}-${formatBirth(end)}`;
+  }
+  return computeFixedContract(appData.evalYear);
+}
+
 // ==================== SUPABASE ====================
 const SUPABASE_URL = 'https://ozniwqtqclgwpiotywhl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bml3cXRxY2xnd3Bpb3R5d2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDIzOTYsImV4cCI6MjEwMDcxODM5Nn0.3AAYjJWbb85pGtqIIbMZgptJRP0syvkWv4ILa_onvKo';
@@ -953,7 +988,7 @@ async function refreshProfiles() {
   appData._profileById = {};
   data.forEach(p => { appData._profileById[p.id] = p; });
   appData.teachers = data.filter(p => p.role === 'teacher')
-    .map(p => ({ id: p.id, name: p.name, subject: p.subject || '' }));
+    .map(p => ({ id: p.id, name: p.name, subject: p.subject || '', isShortTerm: !!p.is_short_term }));
   appData.evaluators = data.filter(p => p.role === 'evaluator')
     .map(p => ({ id: p.id, name: p.name, role: p.committee_role || '' }));
   appData.unassigned = data.filter(p => !p.role);
@@ -1591,6 +1626,9 @@ function renderTeacherMgmt(data) {
   el.innerHTML = data.teachers.map(t => `
     <div class="teacher-row">
       <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher('${t.id}', 'name', this.value)" placeholder="이름">
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap">
+        <input type="checkbox" ${t.isShortTerm ? 'checked' : ''} onchange="updateTeacher('${t.id}', 'is_short_term', this.checked)"> 단기 계약
+      </label>
       <button class="btn-icon" onclick="removeTeacher('${t.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
@@ -1598,18 +1636,20 @@ function renderTeacherMgmt(data) {
 
 async function addTeacher() {
   const name = document.getElementById('newTeacherName').value.trim();
+  const isShortTerm = document.getElementById('newTeacherShortTerm').checked;
   if (!name) { alert('교사 이름을 입력하세요.'); return; }
   const { data, error } = await sb.functions.invoke('admin-create-user', {
-    body: { name, role: 'teacher' },
+    body: { name, role: 'teacher', is_short_term: isShortTerm },
   });
   if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newTeacherName').value = '';
+  document.getElementById('newTeacherShortTerm').checked = false;
   await refreshProfiles();
   renderTeacherMgmt(loadData());
 }
 
 async function updateTeacher(id, field, val) {
-  const column = field === 'subject' ? 'subject' : 'name';
+  const column = field === 'is_short_term' ? 'is_short_term' : field === 'subject' ? 'subject' : 'name';
   const { error } = await sb.from('profiles').update({ [column]: val }).eq('id', id);
   if (error) { alert('수정 실패: ' + error.message); return; }
   await refreshProfiles();
@@ -1784,7 +1824,18 @@ function loadRecommendation() {
   document.getElementById('rec_name').value = currentUser;
   document.getElementById('rec_gender').value = rec.gender || '';
   document.getElementById('rec_birth').value = rec.birth || '';
-  document.getElementById('rec_contract').value = rec.contract || '';
+
+  const isShortTerm = !!(teacher && teacher.isShortTerm);
+  document.getElementById('contractFixedGroup').style.display = isShortTerm ? 'none' : 'block';
+  document.getElementById('contractRangeGroup').style.display = isShortTerm ? 'grid' : 'none';
+  if (isShortTerm) {
+    const m = /^(\d{4})\.(\d{2})\.(\d{2})\.-(\d{4})\.(\d{2})\.(\d{2})\.$/.exec(rec.contract || '');
+    document.getElementById('rec_contract_start').value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+    document.getElementById('rec_contract_end').value = m ? `${m[4]}-${m[5]}-${m[6]}` : '';
+  } else {
+    document.getElementById('rec_contract_fixed').value = computeFixedContract(data.evalYear);
+  }
+
   document.getElementById('rec_address').value = rec.address || '';
   document.getElementById('rec_phone').value = rec.phone || '';
   document.getElementById('rec_subject').value = rec.subject || (teacher ? teacher.subject : '') || '';
@@ -1818,7 +1869,7 @@ async function saveRecommendation() {
     teacher_id: currentTeacherObj.id,
     gender: document.getElementById('rec_gender').value,
     birth: document.getElementById('rec_birth').value,
-    contract: document.getElementById('rec_contract').value,
+    contract: buildContractValue(),
     address: document.getElementById('rec_address').value,
     phone: document.getElementById('rec_phone').value,
     subject: document.getElementById('rec_subject').value,
@@ -1873,7 +1924,7 @@ function printRecommendation() {
     teacherName: currentUser,
     gender: document.getElementById('rec_gender').value,
     birth: document.getElementById('rec_birth').value,
-    contract: document.getElementById('rec_contract').value,
+    contract: buildContractValue(),
     address: document.getElementById('rec_address').value,
     phone: document.getElementById('rec_phone').value,
     subject: document.getElementById('rec_subject').value,
@@ -2211,7 +2262,7 @@ function printResult(teacherId) {
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${rec.contract || (year + '.03.01. ~ ' + (parseInt(year)+1) + '.02.28.')}</td>
+    <td colspan="3">${rec.contract || computeFixedContract(year)}</td>
     <td class="lbl">성별</td>
     <td>${rec.gender || ''}</td>
     <td class="lbl">생년월일</td>
@@ -2373,7 +2424,7 @@ function printEvalData(teacher, ev, data) {
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${rec.contract || (year + '.03.01. ~ ' + (parseInt(year)+1) + '.02.28.')}</td>
+    <td colspan="3">${rec.contract || computeFixedContract(year)}</td>
     <td class="lbl">성별</td>
     <td>${rec.gender || ''}</td>
     <td class="lbl">생년월일</td>
