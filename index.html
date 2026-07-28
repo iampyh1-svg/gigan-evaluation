@@ -683,9 +683,11 @@
         </div>
       </div>
 
+      <div id="rec_locked_notice" class="alert alert-success" style="display:none;margin-top:8px">✅ 제출이 완료되었습니다. 수정이 필요하면 관리자에게 문의하세요.</div>
       <div style="display:flex;gap:10px;margin-top:8px">
-        <button class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
-        <button class="btn btn-primary" style="flex:2" onclick="saveRecommendation()">💾 저장</button>
+        <button id="rec_reset_btn" class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
+        <button id="rec_draft_btn" class="btn btn-secondary" style="flex:2" onclick="saveRecommendation(false)">💾 임시 저장</button>
+        <button id="rec_submit_btn" class="btn btn-primary" style="flex:2" onclick="saveRecommendation(true)">✅ 제출</button>
         <button id="rec_print_btn" class="btn" style="flex:2;background:#6c757d;color:white;display:none" onclick="printRecommendation()">🖨 출력</button>
       </div>
     </div>
@@ -987,6 +989,17 @@ function syncFirstCareerFromContract() {
   document.getElementById('rec_to1').value = end || '';
 }
 
+// 제출 완료된 추천서는 본인이 다시 수정할 수 없도록 전체 입력을 잠근다
+function setRecommendationFormLocked(locked) {
+  document.querySelectorAll('#pageTeacherHome input, #pageTeacherHome select').forEach(el => {
+    el.disabled = locked || (el.id === 'rec_from1' || el.id === 'rec_to1'); // 첫 번째 근무교 날짜는 원래도 항상 잠금
+  });
+  document.getElementById('rec_locked_notice').style.display = locked ? 'block' : 'none';
+  document.getElementById('rec_reset_btn').style.display = locked ? 'none' : '';
+  document.getElementById('rec_draft_btn').style.display = locked ? 'none' : '';
+  document.getElementById('rec_submit_btn').style.display = locked ? 'none' : '';
+}
+
 // 기간제교원 경력 3곳의 근무기간이 서로 겹치는지 확인 (동시에 두 학교 근무는 불가능)
 function findOverlappingCareerDates() {
   const ranges = [1, 2, 3].map(n => ({
@@ -1070,7 +1083,7 @@ async function refreshRecommendations() {
       teacherName: teacher ? teacher.name : '',
       gender: r.gender, birth: r.birth, contract: r.contract, address: r.address, phone: r.phone,
       subject: r.subject, cert: r.cert, expY: r.exp_y, expM: r.exp_m, review: r.review,
-      docnum: r.docnum, special: r.special,
+      docnum: r.docnum, special: r.special, submitted: !!r.submitted,
       career1: r.career1 || {}, career2: r.career2 || {}, career3: r.career3 || {},
       timestamp: r.updated_at,
     };
@@ -1906,9 +1919,11 @@ function loadRecommendation() {
     document.getElementById('rec_to'+n).value = parseDotDate(c.to);
   });
   syncFirstCareerFromContract(); // 첫 번째 근무교의 근무기간은 항상 계약기간을 따르도록 마지막에 덮어쓴다
+
+  setRecommendationFormLocked(!!rec.submitted && currentUserType === 'teacher');
 }
 
-async function saveRecommendation() {
+async function saveRecommendation(submit) {
   if (!currentTeacherObj) { alert('교사 정보를 확인할 수 없습니다.'); return; }
   const overlap = findOverlappingCareerDates();
   if (overlap) {
@@ -1916,6 +1931,7 @@ async function saveRecommendation() {
     alert(`${ordinals[overlap[0]]}와 ${ordinals[overlap[1]]} 근무교의 근무기간이 겹칩니다.\n같은 시기에 두 학교에서 근무할 수 없으니 날짜를 다시 확인해주세요.`);
     return;
   }
+  if (submit && !confirm('제출하면 이후에는 본인이 다시 수정할 수 없습니다. 제출하시겠습니까?')) return;
   const special = document.querySelector('input[name="rec_special"]:checked');
   const { error } = await sb.from('recommendations').upsert({
     teacher_id: currentTeacherObj.id,
@@ -1932,10 +1948,16 @@ async function saveRecommendation() {
     career1: { school: document.getElementById('rec_school1').value, from: formatBirth(document.getElementById('rec_from1').value), to: formatBirth(document.getElementById('rec_to1').value) },
     career2: { school: document.getElementById('rec_school2').value, from: formatBirth(document.getElementById('rec_from2').value), to: formatBirth(document.getElementById('rec_to2').value) },
     career3: { school: document.getElementById('rec_school3').value, from: formatBirth(document.getElementById('rec_from3').value), to: formatBirth(document.getElementById('rec_to3').value) },
+    submitted: !!submit,
   }, { onConflict: 'teacher_id' });
   if (error) { alert('저장 실패: ' + error.message); return; }
   await refreshRecommendations();
-  alert('저장되었습니다.');
+  if (submit) {
+    alert('제출되었습니다.');
+    loadRecommendation();
+  } else {
+    alert('임시 저장되었습니다.');
+  }
 }
 
 function renderRecommendTable(data) {
@@ -1946,16 +1968,20 @@ function renderRecommendTable(data) {
   }
   const rows = data.recommendations.map(r => {
     const dt = new Date(r.timestamp).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const statusBadge = r.submitted
+      ? '<span class="grade-badge gb-우수">제출완료</span>'
+      : '<span class="grade-badge gb-미흡">임시저장</span>';
     return `<tr>
       <td class="td-name">${r.teacherName}</td>
       <td>${r.subject || '-'}</td>
+      <td>${statusBadge}</td>
       <td>${r.review || '-'}</td>
       <td>${dt}</td>
       <td><button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherName}')">🖨 출력</button></td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table>
-    <thead><tr><th>교사명</th><th>임용과목</th><th>심사여부</th><th>작성일시</th><th>출력</th></tr></thead>
+    <thead><tr><th>교사명</th><th>임용과목</th><th>상태</th><th>심사여부</th><th>작성일시</th><th>출력</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
