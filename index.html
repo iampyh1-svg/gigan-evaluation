@@ -568,11 +568,11 @@
       <div id="contractRangeGroup" style="display:none;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group">
           <label>계약 시작일</label>
-          <input type="date" id="rec_contract_start">
+          <input type="date" id="rec_contract_start" onchange="syncFirstCareerFromContract()">
         </div>
         <div class="form-group">
           <label>계약 종료일</label>
-          <input type="date" id="rec_contract_end">
+          <input type="date" id="rec_contract_end" onchange="syncFirstCareerFromContract()">
         </div>
       </div>
       <div class="form-group">
@@ -639,12 +639,12 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group" style="margin-bottom:0">
-            <label>근무 시작일</label>
-            <input type="date" id="rec_from1">
+            <label>근무 시작일 <span style="font-size:11px;color:var(--muted)">(계약기간과 동일)</span></label>
+            <input type="date" id="rec_from1" disabled style="background:#f5f5f5">
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label>근무 종료일</label>
-            <input type="date" id="rec_to1">
+            <label>근무 종료일 <span style="font-size:11px;color:var(--muted)">(계약기간과 동일)</span></label>
+            <input type="date" id="rec_to1" disabled style="background:#f5f5f5">
           </div>
         </div>
       </div>
@@ -950,10 +950,15 @@ function isLeapYear(y) {
 }
 
 // 단기 계약이 아닌 교사의 고정 계약기간 (그 해 3.1. ~ 다음 해 2월 말일)
-function computeFixedContract(year) {
+function computeFixedContractRange(year) {
   const y = parseInt(year, 10);
   const feb = isLeapYear(y + 1) ? 29 : 28;
-  return `${y}.03.01.-${y + 1}.02.${String(feb).padStart(2, '0')}.`;
+  return { start: `${y}-03-01`, end: `${y + 1}-02-${String(feb).padStart(2, '0')}` };
+}
+
+function computeFixedContract(year) {
+  const { start, end } = computeFixedContractRange(year);
+  return `${formatBirth(start)}-${formatBirth(end)}`;
 }
 
 // 추천서 화면(입력 중)에서 현재 상태에 맞는 계약기간 문자열을 만든다
@@ -965,6 +970,21 @@ function buildContractValue() {
     return `${formatBirth(start)}-${formatBirth(end)}`;
   }
   return computeFixedContract(appData.evalYear);
+}
+
+// 첫 번째 근무교(추천학교)는 계약기간과 동일하므로 별도 입력 없이 자동으로 채운다
+function syncFirstCareerFromContract() {
+  let start, end;
+  if (currentTeacherObj && currentTeacherObj.isShortTerm) {
+    start = document.getElementById('rec_contract_start').value;
+    end = document.getElementById('rec_contract_end').value;
+  } else {
+    const range = computeFixedContractRange(appData.evalYear);
+    start = range.start;
+    end = range.end;
+  }
+  document.getElementById('rec_from1').value = start || '';
+  document.getElementById('rec_to1').value = end || '';
 }
 
 // 기간제교원 경력 3곳의 근무기간이 서로 겹치는지 확인 (동시에 두 학교 근무는 불가능)
@@ -1885,6 +1905,7 @@ function loadRecommendation() {
     document.getElementById('rec_from'+n).value = parseDotDate(c.from);
     document.getElementById('rec_to'+n).value = parseDotDate(c.to);
   });
+  syncFirstCareerFromContract(); // 첫 번째 근무교의 근무기간은 항상 계약기간을 따르도록 마지막에 덮어쓴다
 }
 
 async function saveRecommendation() {
