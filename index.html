@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>기간제교원 근무평가 - 전주기전여자고등학교</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --primary: #1a5276;
@@ -747,7 +748,7 @@
       <div id="tchrTabContentList">
         <div class="card">
           <h2>기간제 교사 목록 관리</h2>
-          <div class="desc">평가 대상 교사를 추가하거나 삭제할 수 있습니다. 추가 시 초기 비밀번호: <strong>kijun1234!</strong></div>
+          <div class="desc">평가 대상 교사를 추가하거나 배정 해제할 수 있습니다. 추가 시 초기 비밀번호: <strong>kijun1234!</strong></div>
           <div id="teacherMgmtList" class="teacher-mgmt"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input type="text" id="newTeacherName" placeholder="교사 이름" style="flex:1;font-size:13px;padding:8px 10px">
@@ -844,6 +845,16 @@
           <div style="font-size:13px;color:var(--muted);margin-bottom:10px">평가 데이터를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.</div>
           <button class="btn" style="background:var(--accent);color:white" onclick="clearAllData()">전체 평가 데이터 초기화</button>
         </div>
+        <div class="divider"></div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px">기존 데이터 이전 (임시)</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+            이 기기(브라우저)에 예전 버전 앱으로 저장된 데이터가 남아있다면, 아래 버튼으로 Supabase로 옮길 수 있습니다.
+            단, 옮기기 전에 해당 교사/인사위원 이름이 위 "명단 관리"에 먼저 배정되어 있어야 이름이 일치하는 데이터만 이전됩니다.
+          </div>
+          <button class="btn btn-secondary" onclick="migrateLocalData()">이 기기의 저장된 데이터 업로드</button>
+          <div id="migrateMsg" class="alert" style="display:none;margin-top:12px"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -915,34 +926,96 @@ function getTotalGrade(total) {
   return '-';
 }
 
-function loadData() {
-  return {
-    teachers: JSON.parse(localStorage.getItem('kj_teachers') || '[]'),
-    evaluators: JSON.parse(localStorage.getItem('kj_evaluators') || '[]'),
-    evals: JSON.parse(localStorage.getItem('kj_evals') || '[]'),
-    adminPw: localStorage.getItem('kj_adminpw') || 'admin1234',
-    evalYear: localStorage.getItem('kj_year') || '2026',
-    principalName: localStorage.getItem('kj_principal') || '',
-    recommendations: JSON.parse(localStorage.getItem('kj_recommendations') || '[]'),
-  };
+// ==================== SUPABASE ====================
+const SUPABASE_URL = 'https://ozniwqtqclgwpiotywhl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bml3cXRxY2xnd3Bpb3R5d2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDIzOTYsImV4cCI6MjEwMDcxODM5Nn0.3AAYjJWbb85pGtqIIbMZgptJRP0syvkWv4ILa_onvKo';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let appData = {
+  teachers: [],
+  evaluators: [],
+  unassigned: [],
+  evals: [],
+  recommendations: [],
+  evalYear: '2026',
+  principalName: '',
+};
+
+function loadData() { return appData; }
+
+function findProfileByNameAndRole(name, role) {
+  return Object.values(appData._profileById || {}).find(p => p.name === name && p.role === role);
 }
 
-function saveTeachers(list) { localStorage.setItem('kj_teachers', JSON.stringify(list)); }
-function saveEvaluators(list) { localStorage.setItem('kj_evaluators', JSON.stringify(list)); }
-function saveEvals(list) { localStorage.setItem('kj_evals', JSON.stringify(list)); }
-function saveRecommendations(list) { localStorage.setItem('kj_recommendations', JSON.stringify(list)); }
-
-window.addEventListener('DOMContentLoaded', () => { populateLoginSelect(); populateTeacherLoginSelect(); });
-
-// Init default teachers
-if (!localStorage.getItem('kj_teachers')) {
-  const defaults = [
-    { id: 1, name: '김○○', subject: '국어' },
-    { id: 2, name: '이○○', subject: '영어' },
-    { id: 3, name: '박○○', subject: '수학' },
-  ];
-  saveTeachers(defaults);
+async function refreshProfiles() {
+  const { data, error } = await sb.from('profiles').select('*').order('created_at');
+  if (error) { console.error('profiles 조회 실패', error); return; }
+  appData._profileById = {};
+  data.forEach(p => { appData._profileById[p.id] = p; });
+  appData.teachers = data.filter(p => p.role === 'teacher')
+    .map(p => ({ id: p.id, name: p.name, subject: p.subject || '' }));
+  appData.evaluators = data.filter(p => p.role === 'evaluator')
+    .map(p => ({ id: p.id, name: p.name, role: p.committee_role || '' }));
+  appData.unassigned = data.filter(p => !p.role);
 }
+
+async function refreshEvals() {
+  const { data, error } = await sb.from('evals').select('*');
+  if (error) { console.error('evals 조회 실패', error); return; }
+  appData.evals = data.map(e => {
+    const evaluator = appData._profileById?.[e.evaluator_id];
+    const teacher = appData._profileById?.[e.teacher_id];
+    return {
+      id: e.id,
+      evaluatorId: e.evaluator_id,
+      evaluatorName: evaluator ? evaluator.name : '',
+      evaluatorRole: evaluator ? evaluator.committee_role : '',
+      teacherId: e.teacher_id,
+      teacherName: teacher ? teacher.name : '',
+      teacherSubject: teacher ? (teacher.subject || '') : '',
+      scores: e.scores,
+      total: e.total,
+      grade: e.grade,
+      timestamp: e.created_at,
+    };
+  });
+}
+
+async function refreshRecommendations() {
+  const { data, error } = await sb.from('recommendations').select('*');
+  if (error) { console.error('recommendations 조회 실패', error); return; }
+  appData.recommendations = data.map(r => {
+    const teacher = appData._profileById?.[r.teacher_id];
+    return {
+      teacherId: r.teacher_id,
+      teacherName: teacher ? teacher.name : '',
+      gender: r.gender, birth: r.birth, contract: r.contract, address: r.address, phone: r.phone,
+      subject: r.subject, cert: r.cert, expY: r.exp_y, expM: r.exp_m, review: r.review,
+      docnum: r.docnum, special: r.special,
+      career1: r.career1 || {}, career2: r.career2 || {}, career3: r.career3 || {},
+      timestamp: r.updated_at,
+    };
+  });
+}
+
+async function refreshSettings() {
+  const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
+  if (error) { console.error('app_settings 조회 실패', error); return; }
+  appData.evalYear = data.eval_year || '2026';
+  appData.principalName = data.principal_name || '';
+}
+
+async function refreshAll() {
+  await Promise.all([refreshProfiles(), refreshSettings()]);
+  await Promise.all([refreshEvals(), refreshRecommendations()]);
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await refreshProfiles();
+  await refreshSettings();
+  populateLoginSelect();
+  populateTeacherLoginSelect();
+});
 
 // ==================== STATE ====================
 let currentUser = null;
@@ -962,7 +1035,8 @@ function showPage(id) {
   document.getElementById('mainHeader').style.display = isLoginPage ? 'none' : 'flex';
 }
 
-function logout() {
+async function logout() {
+  await sb.auth.signOut();
   currentUser = null;
   isAdmin = false;
   currentUserType = null;
@@ -991,7 +1065,7 @@ function closeChangePwModal() {
   document.getElementById('modalOverlay').style.display = 'none';
 }
 
-function submitChangePw() {
+async function submitChangePw() {
   const curPw = document.getElementById('modalCurPw').value;
   const newPw1 = document.getElementById('modalNewPw1').value;
   const newPw2 = document.getElementById('modalNewPw2').value;
@@ -1003,28 +1077,17 @@ function submitChangePw() {
   if (!newPw1) return showErr('새 비밀번호를 입력하세요.');
   if (newPw1.length < 4) return showErr('비밀번호는 4자 이상이어야 합니다.');
   if (newPw1 !== newPw2) return showErr('새 비밀번호가 일치하지 않습니다.');
+  if (newPw1 === curPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
 
-  const data = loadData();
-  const ev = data.evaluators.find(e => e.name === currentUser);
-  if (!ev) return showErr('인사위원 정보를 찾을 수 없습니다.');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.email) return showErr('로그인 정보를 확인할 수 없습니다.');
 
-  // 교사 로그인인 경우 teachers에서, 인사위원인 경우 evaluators에서 처리
-  if (currentUserType === 'teacher') {
-    const t = data.teachers.find(t => t.name === currentUser);
-    if (!t) return showErr('교사 정보를 찾을 수 없습니다.');
-    const correctPw = t.password || 'kijun1234!';
-    if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
-    if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
-    t.password = newPw1;
-    saveTeachers(data.teachers);
-  } else {
-    if (!ev) return showErr('인사위원 정보를 찾을 수 없습니다.');
-    const correctPw = ev.password || 'kijun1234!';
-    if (curPw !== correctPw) return showErr('현재 비밀번호가 올바르지 않습니다.');
-    if (newPw1 === correctPw) return showErr('새 비밀번호가 기존 비밀번호와 동일합니다.');
-    ev.password = newPw1;
-    saveEvaluators(data.evaluators);
-  }
+  const { error: reauthErr } = await sb.auth.signInWithPassword({ email: user.email, password: curPw });
+  if (reauthErr) return showErr('현재 비밀번호가 올바르지 않습니다.');
+
+  const { error: updateErr } = await sb.auth.updateUser({ password: newPw1 });
+  if (updateErr) return showErr('비밀번호 변경 실패: ' + updateErr.message);
+
   closeChangePwModal();
   alert('비밀번호가 변경되었습니다.');
 }
@@ -1081,22 +1144,23 @@ function populateTeacherLoginSelect() {
   });
 }
 
-function doTeacherLogin() {
+async function doTeacherLogin() {
   const name = document.getElementById('teacherLoginName').value.trim();
   const pw   = document.getElementById('teacherLoginPw').value;
   const err  = document.getElementById('teacherLoginError');
   if (!name) { err.textContent = '이름을 선택하세요.'; err.style.display = 'block'; return; }
   if (!pw)   { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
-  const data = loadData();
-  const teacher = data.teachers.find(t => t.name === name);
-  if (!teacher) { err.textContent = '등록되지 않은 교사입니다.'; err.style.display = 'block'; return; }
-  const correctPw = teacher.password || 'kijun1234!';
-  if (pw !== correctPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  const profile = findProfileByNameAndRole(name, 'teacher');
+  if (!profile) { err.textContent = '등록되지 않은 교사입니다.'; err.style.display = 'block'; return; }
+  const { error: authErr } = await sb.auth.signInWithPassword({ email: profile.email, password: pw });
+  if (authErr) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
+  await refreshEvals();
+  await refreshRecommendations();
   currentUser = name;
   isAdmin = false;
   currentUserType = 'teacher';
-  currentTeacherObj = teacher;
+  currentTeacherObj = appData.teachers.find(t => t.id === profile.id);
   document.getElementById('headerUser').textContent = name + ' 선생님';
   document.getElementById('changePwBtn').style.display = 'inline-block';
   document.getElementById('adminBtn').style.display = 'none';
@@ -1104,34 +1168,41 @@ function doTeacherLogin() {
   showPage('pageTeacherHome');
 }
 
-function doLogin() {
+async function doLogin() {
   const name = document.getElementById('loginName').value.trim();
   const pw = document.getElementById('loginPw').value;
   const err = document.getElementById('loginError');
   if (!name) { err.textContent = '이름을 선택하세요.'; err.style.display = 'block'; return; }
   if (!pw) { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
-  const data = loadData();
-  const evaluator = data.evaluators.find(ev => ev.name === name);
-  if (!evaluator) { err.textContent = '등록되지 않은 이름입니다. 관리자에게 문의하세요.'; err.style.display = 'block'; return; }
-  const correctPw = evaluator.password || 'kijun1234!';
-  if (pw !== correctPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  const profile = findProfileByNameAndRole(name, 'evaluator');
+  if (!profile) { err.textContent = '등록되지 않은 이름입니다. 관리자에게 문의하세요.'; err.style.display = 'block'; return; }
+  const { error: authErr } = await sb.auth.signInWithPassword({ email: profile.email, password: pw });
+  if (authErr) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
+  await refreshEvals();
+  await refreshRecommendations();
   currentUser = name;
   isAdmin = false;
+  currentUserType = 'evaluator';
   document.getElementById('headerUser').textContent = name + ' 위원';
   document.getElementById('adminBtn').style.display = 'none';
   document.getElementById('changePwBtn').style.display = 'inline-block';
   goSelectTeacher();
 }
 
-function doAdminLogin() {
+async function doAdminLogin() {
   const pw = document.getElementById('adminPw').value;
   const err = document.getElementById('adminLoginError');
-  const data = loadData();
-  if (pw !== data.adminPw) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
+  if (!pw) { err.textContent = '비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
+  const adminProfile = Object.values(appData._profileById || {}).find(p => p.role === 'admin');
+  if (!adminProfile) { err.textContent = '관리자 계정이 설정되지 않았습니다.'; err.style.display = 'block'; return; }
+  const { error: authErr } = await sb.auth.signInWithPassword({ email: adminProfile.email, password: pw });
+  if (authErr) { err.textContent = '비밀번호가 올바르지 않습니다.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
   currentUser = '관리자';
   isAdmin = true;
+  currentUserType = 'admin';
+  await refreshAll();
   document.getElementById('headerUser').textContent = '관리자';
   document.getElementById('adminBtn').style.display = 'none';
   document.getElementById('changePwBtn').style.display = 'none';
@@ -1157,9 +1228,9 @@ function renderTeacherList() {
       ? `<span class="eval-status status-done">평가완료 ${myEval.total}점</span>`
       : `<span class="eval-status status-pending">미평가</span>`;
     const printBtn = myEval
-      ? `<button class="btn-print-small" onclick="event.stopPropagation();printEval(${t.id})" title="평가서 출력">🖨 출력</button>`
+      ? `<button class="btn-print-small" onclick="event.stopPropagation();printEval('${t.id}')" title="평가서 출력">🖨 출력</button>`
       : '';
-    return `<div class="teacher-item" onclick="selectTeacher(${t.id})">
+    return `<div class="teacher-item" onclick="selectTeacher('${t.id}')">
       <div>
         <div class="name">${t.name}</div>
         <div class="subject">${t.subject || ''}</div>
@@ -1266,29 +1337,25 @@ function updateTotal() {
   gradeEl.textContent = grade === '-' ? '미입력' : grade;
 }
 
-function submitEval() {
+async function submitEval() {
   const unentered = scores.filter(s => !s || s < 1);
   if (unentered.length > 0) {
     alert(`아직 입력하지 않은 항목이 ${unentered.length}개 있습니다.\n모든 항목을 입력해주세요.`);
     return;
   }
   const total = scores.reduce((a, b) => a + b, 0);
-  const data = loadData();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { alert('로그인 정보를 확인할 수 없습니다.'); return; }
 
-  // Remove existing eval from same evaluator for same teacher
-  const filtered = data.evals.filter(e => !(e.evaluatorName === currentUser && e.teacherId === currentTeacher.id));
-  filtered.push({
-    id: Date.now(),
-    evaluatorName: currentUser,
-    teacherId: currentTeacher.id,
-    teacherName: currentTeacher.name,
-    teacherSubject: currentTeacher.subject || '',
+  const { error } = await sb.from('evals').upsert({
+    evaluator_id: user.id,
+    teacher_id: currentTeacher.id,
     scores: [...scores],
     total,
     grade: getTotalGrade(total),
-    timestamp: new Date().toISOString(),
-  });
-  saveEvals(filtered);
+  }, { onConflict: 'evaluator_id,teacher_id' });
+  if (error) { alert('평가 제출 실패: ' + error.message); return; }
+  await refreshEvals();
 
   document.getElementById('completeTeacher').textContent =
     currentTeacher.name + (currentTeacher.subject ? ' (' + currentTeacher.subject + ')' : '') + ' 평가 완료';
@@ -1334,7 +1401,7 @@ function renderPrintevalTable(data) {
       const firstCell = idx === 0
         ? `<td rowspan="${evalsForTeacher.length}" style="font-weight:600;vertical-align:middle">${t.name}</td><td rowspan="${evalsForTeacher.length}" style="vertical-align:middle">${t.subject||'-'}</td>`
         : '';
-      return `<tr>${firstCell}<td>${ev.evaluatorName} (${ev.evaluatorRole||''})</td><td><button class="btn-print-small" onclick="printEval(${t.id}, '${ev.evaluatorName}')">🖨 출력</button></td></tr>`;
+      return `<tr>${firstCell}<td>${ev.evaluatorName} (${ev.evaluatorRole||''})</td><td><button class="btn-print-small" onclick="printEval('${t.id}', '${ev.evaluatorName}')">🖨 출력</button></td></tr>`;
     }).join('');
   }).join('');
   wrap.innerHTML = `<table>
@@ -1410,7 +1477,7 @@ function renderSummaryTable(data) {
       ${avgScores.map(s => `<td>${s}</td>`).join('')}
       <td class="td-avg">${avgTotal}</td>
       <td><span class="grade-badge gb-${grade}">${grade}</span></td>
-      <td><button class="btn-print-small" onclick="printResult(${t.id})">🖨 결과 출력</button></td>
+      <td><button class="btn-print-small" onclick="printResult('${t.id}')">🖨 결과 출력</button></td>
     </tr>`;
   }).join('');
 
@@ -1480,10 +1547,11 @@ function renderDetailTable() {
   </table>`;
 }
 
-function deleteEval(id) {
+async function deleteEval(id) {
   if (!confirm('이 평가 내역을 삭제하시겠습니까?')) return;
-  const data = loadData();
-  saveEvals(data.evals.filter(e => e.id !== id));
+  const { error } = await sb.from('evals').delete().eq('id', id);
+  if (error) { alert('삭제 실패: ' + error.message); return; }
+  await refreshEvals();
   renderAdmin();
 }
 
@@ -1495,36 +1563,39 @@ function renderTeacherMgmt(data) {
   }
   el.innerHTML = data.teachers.map(t => `
     <div class="teacher-row">
-      <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher(${t.id}, 'name', this.value)" placeholder="이름">
-      <input type="text" value="${t.subject || ''}" class="sub-input" onchange="updateTeacher(${t.id}, 'subject', this.value)" placeholder="담당과목">
-      <button class="btn-icon" onclick="removeTeacher(${t.id})" title="삭제">🗑</button>
+      <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher('${t.id}', 'name', this.value)" placeholder="이름">
+      <input type="text" value="${t.subject || ''}" class="sub-input" onchange="updateTeacher('${t.id}', 'subject', this.value)" placeholder="담당과목">
+      <button class="btn-icon" onclick="removeTeacher('${t.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
 }
 
-function addTeacher() {
+async function addTeacher() {
   const name = document.getElementById('newTeacherName').value.trim();
   const subject = document.getElementById('newTeacherSubject').value.trim();
   if (!name) { alert('교사 이름을 입력하세요.'); return; }
-  const data = loadData();
-  const id = Date.now();
-  data.teachers.push({ id, name, subject, password: 'kijun1234!' });
-  saveTeachers(data.teachers);
+  const { data, error } = await sb.functions.invoke('admin-create-user', {
+    body: { name, role: 'teacher', subject },
+  });
+  if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newTeacherName').value = '';
   document.getElementById('newTeacherSubject').value = '';
+  await refreshProfiles();
   renderTeacherMgmt(loadData());
 }
 
-function updateTeacher(id, field, val) {
-  const data = loadData();
-  const t = data.teachers.find(t => t.id === id);
-  if (t) { t[field] = val; saveTeachers(data.teachers); }
+async function updateTeacher(id, field, val) {
+  const column = field === 'subject' ? 'subject' : 'name';
+  const { error } = await sb.from('profiles').update({ [column]: val }).eq('id', id);
+  if (error) { alert('수정 실패: ' + error.message); return; }
+  await refreshProfiles();
 }
 
-function removeTeacher(id) {
-  if (!confirm('이 교사를 삭제하시겠습니까?\n관련 평가 데이터는 유지됩니다.')) return;
-  const data = loadData();
-  saveTeachers(data.teachers.filter(t => t.id !== id));
+async function removeTeacher(id) {
+  if (!confirm('이 교사의 배정을 해제하시겠습니까?\n(계정 자체는 삭제되지 않고, 이름/역할만 지워집니다. 관련 평가 데이터는 유지됩니다.)')) return;
+  const { error } = await sb.from('profiles').update({ name: null, role: null, subject: null }).eq('id', id);
+  if (error) { alert('해제 실패: ' + error.message); return; }
+  await refreshProfiles();
   renderTeacherMgmt(loadData());
 }
 
@@ -1537,9 +1608,9 @@ function renderEvaluatorMgmt(data) {
   }
   el.innerHTML = data.evaluators.map(ev => `
     <div class="teacher-row">
-      <input type="text" value="${ev.name}" class="sub-input" onchange="updateEvaluator(${ev.id}, 'name', this.value)" placeholder="이름">
-      <input type="text" value="${ev.role || ''}" class="sub-input" onchange="updateEvaluator(${ev.id}, 'role', this.value)" placeholder="직위 (선택)">
-      <button class="btn-icon" onclick="removeEvaluator(${ev.id})" title="삭제">🗑</button>
+      <input type="text" value="${ev.name}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'name', this.value)" placeholder="이름">
+      <input type="text" value="${ev.role || ''}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'role', this.value)" placeholder="직위 (선택)">
+      <button class="btn-icon" onclick="removeEvaluator('${ev.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
 }
@@ -1561,59 +1632,76 @@ function renderEvaluatorPwList(data) {
   el.innerHTML = data.evaluators.map(ev => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
       <div style="min-width:90px;font-weight:600;font-size:14px">${ev.name}${ev.role ? ' <span style="font-size:12px;color:var(--muted);font-weight:400">('+ev.role+')</span>' : ''}</div>
-      <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw(${ev.id})">
-      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setEvaluatorPw(${ev.id})">변경</button>
-      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetEvaluatorPw(${ev.id})">초기화</button>
+      <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw('${ev.id}')">
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setEvaluatorPw('${ev.id}')">변경</button>
+      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetEvaluatorPw('${ev.id}')">초기화</button>
     </div>
   `).join('');
 }
 
-function setEvaluatorPw(id) {
+async function callResetPassword(targetUserId, newPassword) {
+  const { data, error } = await sb.functions.invoke('admin-reset-password', {
+    body: { target_user_id: targetUserId, new_password: newPassword },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return true;
+}
+
+async function setEvaluatorPw(id) {
   const input = document.getElementById('evpw_' + id);
   const newPw = input.value.trim();
   if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
-  const data = loadData();
-  const ev = data.evaluators.find(e => e.id === id);
+  const ev = appData.evaluators.find(e => e.id === id);
   if (!ev) return;
-  ev.password = newPw;
-  saveEvaluators(data.evaluators);
-  input.value = '';
-  alert(`${ev.name} 위원의 비밀번호가 변경되었습니다.`);
+  try {
+    await callResetPassword(id, newPw);
+    input.value = '';
+    alert(`${ev.name} 위원의 비밀번호가 변경되었습니다.`);
+  } catch (e) {
+    alert('변경 실패: ' + e.message);
+  }
 }
 
-function resetEvaluatorPw(id) {
-  const data = loadData();
-  const ev = data.evaluators.find(e => e.id === id);
+async function resetEvaluatorPw(id) {
+  const ev = appData.evaluators.find(e => e.id === id);
   if (!ev) return;
   if (!confirm(`${ev.name} 위원의 비밀번호를 초기값(kijun1234!)으로 초기화하시겠습니까?`)) return;
-  ev.password = 'kijun1234!';
-  saveEvaluators(data.evaluators);
-  alert(`${ev.name} 위원의 비밀번호가 초기화되었습니다.`);
+  try {
+    await callResetPassword(id);
+    alert(`${ev.name} 위원의 비밀번호가 초기화되었습니다.`);
+  } catch (e) {
+    alert('초기화 실패: ' + e.message);
+  }
 }
 
-function addEvaluator() {
+async function addEvaluator() {
   const name = document.getElementById('newEvaluatorName').value.trim();
   const role = document.getElementById('newEvaluatorRole').value.trim();
   if (!name) { alert('인사위원 이름을 입력하세요.'); return; }
-  const data = loadData();
-  if (data.evaluators.find(ev => ev.name === name)) { alert('이미 등록된 이름입니다.'); return; }
-  data.evaluators.push({ id: Date.now(), name, role, password: 'kijun1234!' });
-  saveEvaluators(data.evaluators);
+  if (appData.evaluators.find(ev => ev.name === name)) { alert('이미 등록된 이름입니다.'); return; }
+  const { data, error } = await sb.functions.invoke('admin-create-user', {
+    body: { name, role: 'evaluator', committee_role: role },
+  });
+  if (error || data?.error) { alert('추가 실패: ' + (data?.error || error.message)); return; }
   document.getElementById('newEvaluatorName').value = '';
   document.getElementById('newEvaluatorRole').value = '';
+  await refreshProfiles();
   renderEvaluatorMgmt(loadData());
 }
 
-function updateEvaluator(id, field, val) {
-  const data = loadData();
-  const ev = data.evaluators.find(e => e.id === id);
-  if (ev) { ev[field] = val; saveEvaluators(data.evaluators); }
+async function updateEvaluator(id, field, val) {
+  const column = field === 'role' ? 'committee_role' : 'name';
+  const { error } = await sb.from('profiles').update({ [column]: val }).eq('id', id);
+  if (error) { alert('수정 실패: ' + error.message); return; }
+  await refreshProfiles();
 }
 
-function removeEvaluator(id) {
-  if (!confirm('이 인사위원을 삭제하시겠습니까?')) return;
-  const data = loadData();
-  saveEvaluators(data.evaluators.filter(ev => ev.id !== id));
+async function removeEvaluator(id) {
+  if (!confirm('이 인사위원의 배정을 해제하시겠습니까?\n(계정 자체는 삭제되지 않습니다.)')) return;
+  const { error } = await sb.from('profiles').update({ name: null, role: null, committee_role: null }).eq('id', id);
+  if (error) { alert('해제 실패: ' + error.message); return; }
+  await refreshProfiles();
   renderEvaluatorMgmt(loadData());
 }
 
@@ -1632,32 +1720,36 @@ function renderTeacherPwList(data) {
   el.innerHTML = data.teachers.map(t => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
       <div style="min-width:90px;font-weight:600;font-size:14px">${t.name}${t.subject?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t.subject})</span>`:''}</div>
-      <input type="password" id="tpw_${t.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setTeacherPw(${t.id})">
-      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setTeacherPw(${t.id})">변경</button>
-      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetTeacherPw(${t.id})">초기화</button>
+      <input type="password" id="tpw_${t.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setTeacherPw('${t.id}')">
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setTeacherPw('${t.id}')">변경</button>
+      <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetTeacherPw('${t.id}')">초기화</button>
     </div>`).join('');
 }
 
-function setTeacherPw(id) {
+async function setTeacherPw(id) {
   const input = document.getElementById('tpw_' + id);
   const newPw = input.value.trim();
   if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
-  const data = loadData();
-  const t = data.teachers.find(t => t.id === id);
+  const t = appData.teachers.find(t => t.id === id);
   if (!t) return;
-  t.password = newPw;
-  saveTeachers(data.teachers);
-  input.value = '';
-  alert(`${t.name} 선생님의 비밀번호가 변경되었습니다.`);
+  try {
+    await callResetPassword(id, newPw);
+    input.value = '';
+    alert(`${t.name} 선생님의 비밀번호가 변경되었습니다.`);
+  } catch (e) {
+    alert('변경 실패: ' + e.message);
+  }
 }
 
-function resetTeacherPw(id) {
-  const data = loadData();
-  const t = data.teachers.find(t => t.id === id);
+async function resetTeacherPw(id) {
+  const t = appData.teachers.find(t => t.id === id);
   if (!t || !confirm(`${t.name} 선생님의 비밀번호를 초기값(kijun1234!)으로 초기화하시겠습니까?`)) return;
-  t.password = 'kijun1234!';
-  saveTeachers(data.teachers);
-  alert(`${t.name} 선생님의 비밀번호가 초기화되었습니다.`);
+  try {
+    await callResetPassword(id);
+    alert(`${t.name} 선생님의 비밀번호가 초기화되었습니다.`);
+  } catch (e) {
+    alert('초기화 실패: ' + e.message);
+  }
 }
 
 // ==================== 추천서 작성 ====================
@@ -1696,11 +1788,11 @@ function loadRecommendation() {
   });
 }
 
-function saveRecommendation() {
-  const data = loadData();
+async function saveRecommendation() {
+  if (!currentTeacherObj) { alert('교사 정보를 확인할 수 없습니다.'); return; }
   const special = document.querySelector('input[name="rec_special"]:checked');
-  const rec = {
-    teacherName: currentUser,
+  const { error } = await sb.from('recommendations').upsert({
+    teacher_id: currentTeacherObj.id,
     gender: document.getElementById('rec_gender').value,
     birth: document.getElementById('rec_birth').value,
     contract: document.getElementById('rec_contract').value,
@@ -1708,19 +1800,17 @@ function saveRecommendation() {
     phone: document.getElementById('rec_phone').value,
     subject: document.getElementById('rec_subject').value,
     cert: document.getElementById('rec_cert').value,
-    expY: document.getElementById('rec_exp_y').value,
-    expM: document.getElementById('rec_exp_m').value,
+    exp_y: document.getElementById('rec_exp_y').value,
+    exp_m: document.getElementById('rec_exp_m').value,
     review: document.getElementById('rec_review').value,
     docnum: document.getElementById('rec_docnum').value,
     special: special ? special.value : '',
     career1: { school: document.getElementById('rec_school1').value, from: document.getElementById('rec_from1').value, to: document.getElementById('rec_to1').value },
     career2: { school: document.getElementById('rec_school2').value, from: document.getElementById('rec_from2').value, to: document.getElementById('rec_to2').value },
     career3: { school: document.getElementById('rec_school3').value, from: document.getElementById('rec_from3').value, to: document.getElementById('rec_to3').value },
-    timestamp: new Date().toISOString(),
-  };
-  const list = data.recommendations.filter(r => r.teacherName !== currentUser);
-  list.push(rec);
-  saveRecommendations(list);
+  }, { onConflict: 'teacher_id' });
+  if (error) { alert('저장 실패: ' + error.message); return; }
+  await refreshRecommendations();
   alert('저장되었습니다.');
 }
 
@@ -1896,32 +1986,93 @@ function openRecommendPrint(rec, data) {
 }
 
 // ==================== 비밀번호 변경 (교사용 모달 연동) ====================
-function changePw() {
+async function changePw() {
   const p1 = document.getElementById('newPw1').value;
   const p2 = document.getElementById('newPw2').value;
   const msg = document.getElementById('pwMsg');
   if (!p1) { showMsg(msg, 'error', '새 비밀번호를 입력하세요.'); return; }
   if (p1 !== p2) { showMsg(msg, 'error', '비밀번호가 일치하지 않습니다.'); return; }
-  localStorage.setItem('kj_adminpw', p1);
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) { showMsg(msg, 'error', '변경 실패: ' + error.message); return; }
   showMsg(msg, 'success', '비밀번호가 변경되었습니다.');
   document.getElementById('newPw1').value = '';
   document.getElementById('newPw2').value = '';
 }
 
-function saveSettings() {
+async function saveSettings() {
   const year = document.getElementById('evalYear').value.trim();
   const principal = document.getElementById('principalName').value.trim();
-  localStorage.setItem('kj_year', year || '2026');
-  localStorage.setItem('kj_principal', principal);
+  const { error } = await sb.from('app_settings')
+    .update({ eval_year: year || '2026', principal_name: principal })
+    .eq('id', 1);
+  if (error) { alert('저장 실패: ' + error.message); return; }
+  await refreshSettings();
   alert('저장되었습니다.');
 }
 
-function clearAllData() {
+async function clearAllData() {
   if (!confirm('모든 평가 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
   if (!confirm('정말로 삭제하시겠습니까?')) return;
-  localStorage.removeItem('kj_evals');
+  const { error } = await sb.from('evals').delete().gte('id', 0);
+  if (error) { alert('삭제 실패: ' + error.message); return; }
+  await refreshEvals();
   renderAdmin();
   alert('초기화되었습니다.');
+}
+
+// ==================== 기존 localStorage 데이터 → Supabase 이전 (임시) ====================
+async function migrateLocalData() {
+  const msg = document.getElementById('migrateMsg');
+  const oldTeachers = JSON.parse(localStorage.getItem('kj_teachers') || '[]');
+  const oldEvaluators = JSON.parse(localStorage.getItem('kj_evaluators') || '[]');
+  const oldEvals = JSON.parse(localStorage.getItem('kj_evals') || '[]');
+  const oldRecs = JSON.parse(localStorage.getItem('kj_recommendations') || '[]');
+
+  if (!oldTeachers.length && !oldEvaluators.length && !oldEvals.length && !oldRecs.length) {
+    showMsg(msg, 'error', '이 기기에 이전할 예전 데이터가 없습니다.');
+    return;
+  }
+  if (!confirm('이 기기에 저장된 기존 데이터를 Supabase로 업로드하시겠습니까?')) return;
+
+  const findId = (name, role) => {
+    const p = Object.values(appData._profileById || {}).find(x => x.name === name && x.role === role);
+    return p ? p.id : null;
+  };
+
+  let evalOk = 0, evalSkip = 0, recOk = 0, recSkip = 0;
+
+  for (const e of oldEvals) {
+    const evaluatorId = findId(e.evaluatorName, 'evaluator');
+    const teacherId = findId(e.teacherName, 'teacher');
+    if (!evaluatorId || !teacherId) { evalSkip++; continue; }
+    const { error } = await sb.from('evals').upsert({
+      evaluator_id: evaluatorId,
+      teacher_id: teacherId,
+      scores: e.scores,
+      total: e.total,
+      grade: e.grade,
+    }, { onConflict: 'evaluator_id,teacher_id' });
+    if (error) { evalSkip++; } else { evalOk++; }
+  }
+
+  for (const r of oldRecs) {
+    const teacherId = findId(r.teacherName, 'teacher');
+    if (!teacherId) { recSkip++; continue; }
+    const { error } = await sb.from('recommendations').upsert({
+      teacher_id: teacherId,
+      gender: r.gender, birth: r.birth, contract: r.contract, address: r.address, phone: r.phone,
+      subject: r.subject, cert: r.cert, exp_y: r.expY, exp_m: r.expM, review: r.review,
+      docnum: r.docnum, special: r.special,
+      career1: r.career1 || {}, career2: r.career2 || {}, career3: r.career3 || {},
+    }, { onConflict: 'teacher_id' });
+    if (error) { recSkip++; } else { recOk++; }
+  }
+
+  await refreshAll();
+  renderAdmin();
+  showMsg(msg, 'success',
+    `평가 ${evalOk}건 이전 완료(건너뜀 ${evalSkip}건), 추천서 ${recOk}건 이전 완료(건너뜀 ${recSkip}건). ` +
+    `건너뛴 항목은 이름이 아직 배정되지 않은 경우이니, "명단 관리"에서 배정 후 다시 시도하세요.`);
 }
 
 function showMsg(el, type, text) {
