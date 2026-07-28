@@ -1584,7 +1584,6 @@ function renderTeacherMgmt(data) {
   el.innerHTML = data.teachers.map(t => `
     <div class="teacher-row">
       <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher('${t.id}', 'name', this.value)" placeholder="이름">
-      <input type="text" value="${t.subject || ''}" class="sub-input" onchange="updateTeacher('${t.id}', 'subject', this.value)" placeholder="담당과목">
       <button class="btn-icon" onclick="removeTeacher('${t.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
