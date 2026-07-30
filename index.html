@@ -139,6 +139,8 @@
   .btn-primary:active { transform: translateY(0); }
   .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
   .btn-secondary:hover { background: #e8eef5; }
+  .btn-danger { background: #e53935; color: white; }
+  .btn-danger:hover { background: #c62828; }
   .btn-success { background: var(--success); color: white; }
   .btn-success:hover { background: #1e8449; }
   .btn-full { width: 100%; display: block; text-align: center; }
@@ -392,8 +394,46 @@
   <div class="header-right">
     <div class="user-badge" id="headerUser"></div>
     <button class="btn-logout" onclick="openChangePwModal()" id="changePwBtn" style="display:none">🔑 비밀번호 변경</button>
+    <button class="btn-logout" onclick="openSignModal()" id="signBtn" style="display:none">✍ 개인정보 설정</button>
     <button class="btn-logout" onclick="logout()">로그아웃</button>
     <button class="btn-logout" onclick="goAdmin()" id="adminBtn" style="display:none">관리자</button>
+  </div>
+</div>
+
+<!-- MODAL: 전자서명 설정 -->
+<div id="signModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.18);margin:16px">
+    <div style="font-size:18px;font-weight:700;color:var(--primary);margin-bottom:6px">전자서명 설정</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="signModalUserName"></div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#444">현재 서명</div>
+      <div id="signPreviewWrap" style="border:1px solid #ddd;border-radius:8px;padding:12px;min-height:80px;display:flex;align-items:center;justify-content:center;background:#fafafa">
+        <span id="signPreviewPlaceholder" style="color:#bbb;font-size:13px">등록된 서명이 없습니다</span>
+        <img id="signPreviewImg" src="" alt="서명" style="display:none;max-height:70px;max-width:320px;object-fit:contain">
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#444">서명 이미지 업로드</div>
+      <div style="font-size:12px;color:#888;margin-bottom:8px">PNG, JPG 파일을 선택하세요. (배경이 투명한 PNG 권장)</div>
+      <label style="display:block;border:2px dashed #c5cae9;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s"
+             onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='#c5cae9'">
+        <input type="file" id="signFileInput" accept="image/*" style="display:none" onchange="handleSignatureUpload(event)">
+        <div style="font-size:13px;color:#666">📁 파일 선택 또는 여기에 드롭</div>
+      </label>
+      <div id="signUploadPreviewWrap" style="margin-top:10px;display:none;text-align:center">
+        <div style="font-size:12px;color:#555;margin-bottom:6px">업로드할 서명 미리보기</div>
+        <img id="signUploadPreviewImg" src="" alt="미리보기" style="max-height:70px;max-width:320px;object-fit:contain;border:1px solid #eee;border-radius:6px;padding:4px">
+      </div>
+    </div>
+
+    <div id="signModalError" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeSignModal()">닫기</button>
+      <button class="btn btn-danger" id="signDeleteBtn" onclick="deleteSignature()" style="flex:1;display:none">서명 삭제</button>
+      <button class="btn btn-primary" style="flex:1" id="signSaveBtn" onclick="saveSignature()" disabled>저장</button>
+    </div>
   </div>
 </div>
 
@@ -1149,6 +1189,7 @@ async function restoreSession() {
     currentUserType = 'evaluator';
     document.getElementById('headerUser').textContent = profile.name + ' 위원';
     document.getElementById('changePwBtn').style.display = 'inline-block';
+    document.getElementById('signBtn').style.display = 'inline-block';
     goSelectTeacher();
   }
 }
@@ -1182,6 +1223,103 @@ async function logout() {
   document.getElementById('loginPw').value = '';
   document.getElementById('adminPw').value = '';
   document.getElementById('changePwBtn').style.display = 'none';
+  document.getElementById('signBtn').style.display = 'none';
+}
+
+// ==================== 전자서명 설정 모달 ====================
+let _pendingSignatureBase64 = null;
+
+async function openSignModal() {
+  const userName = currentUserType === 'teacher' ? (currentTeacherObj?.name || currentUser) + ' 선생님' : currentUser + ' 위원';
+  document.getElementById('signModalUserName').textContent = userName;
+  document.getElementById('signModalError').style.display = 'none';
+  document.getElementById('signUploadPreviewWrap').style.display = 'none';
+  document.getElementById('signFileInput').value = '';
+  document.getElementById('signSaveBtn').disabled = true;
+  _pendingSignatureBase64 = null;
+
+  // 기존 서명 로드
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) {
+    const { data: profile } = await sb.from('profiles').select('signature_base64').eq('id', user.id).maybeSingle();
+    const existing = profile?.signature_base64;
+    if (existing) {
+      document.getElementById('signPreviewImg').src = existing;
+      document.getElementById('signPreviewImg').style.display = 'block';
+      document.getElementById('signPreviewPlaceholder').style.display = 'none';
+      document.getElementById('signDeleteBtn').style.display = 'inline-block';
+    } else {
+      document.getElementById('signPreviewImg').style.display = 'none';
+      document.getElementById('signPreviewPlaceholder').style.display = 'block';
+      document.getElementById('signDeleteBtn').style.display = 'none';
+    }
+  }
+
+  document.getElementById('signModalOverlay').style.display = 'flex';
+}
+
+function closeSignModal() {
+  document.getElementById('signModalOverlay').style.display = 'none';
+}
+
+function handleSignatureUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    document.getElementById('signModalError').textContent = '이미지 파일만 업로드할 수 있습니다.';
+    document.getElementById('signModalError').style.display = 'block';
+    return;
+  }
+  document.getElementById('signModalError').style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _pendingSignatureBase64 = e.target.result;
+    document.getElementById('signUploadPreviewImg').src = _pendingSignatureBase64;
+    document.getElementById('signUploadPreviewWrap').style.display = 'block';
+    document.getElementById('signSaveBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveSignature() {
+  if (!_pendingSignatureBase64) return;
+  const btn = document.getElementById('signSaveBtn');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) {
+    document.getElementById('signModalError').textContent = '로그인 정보를 확인할 수 없습니다.';
+    document.getElementById('signModalError').style.display = 'block';
+    btn.disabled = false; btn.textContent = '저장'; return;
+  }
+
+  const { error } = await sb.from('profiles').update({ signature_base64: _pendingSignatureBase64 }).eq('id', user.id);
+  if (error) {
+    document.getElementById('signModalError').textContent = '저장 실패: ' + error.message;
+    document.getElementById('signModalError').style.display = 'block';
+    btn.disabled = false; btn.textContent = '저장'; return;
+  }
+
+  // 프리뷰 갱신
+  document.getElementById('signPreviewImg').src = _pendingSignatureBase64;
+  document.getElementById('signPreviewImg').style.display = 'block';
+  document.getElementById('signPreviewPlaceholder').style.display = 'none';
+  document.getElementById('signDeleteBtn').style.display = 'inline-block';
+  document.getElementById('signUploadPreviewWrap').style.display = 'none';
+  _pendingSignatureBase64 = null;
+  btn.disabled = true; btn.textContent = '저장';
+  alert('전자서명이 저장되었습니다.');
+}
+
+async function deleteSignature() {
+  if (!confirm('등록된 서명을 삭제하시겠습니까?')) return;
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  await sb.from('profiles').update({ signature_base64: null }).eq('id', user.id);
+  document.getElementById('signPreviewImg').style.display = 'none';
+  document.getElementById('signPreviewPlaceholder').style.display = 'block';
+  document.getElementById('signDeleteBtn').style.display = 'none';
 }
 
 // ==================== 비밀번호 변경 모달 ====================
@@ -2396,6 +2534,14 @@ async function printResult(teacherId) {
 }
 
 // ==================== 평가서 출력 ====================
+async function fetchSignatureForEvaluator(evaluatorName) {
+  // profiles에서 name이 일치하는 인사위원의 서명 조회
+  const profile = Object.values(appData._profileById || {}).find(p => p.name === evaluatorName && p.role === 'evaluator');
+  if (!profile) return null;
+  const { data } = await sb.from('profiles').select('signature_base64').eq('id', profile.id).maybeSingle();
+  return data?.signature_base64 || null;
+}
+
 async function fetchRecForTeacher(teacherId) {
   // appData에서 먼저 찾고, 없으면 Supabase에서 직접 조회 (RLS 우회)
   const fromCache = (appData.recommendations || []).find(r => r.teacherId === teacherId);
@@ -2429,7 +2575,14 @@ async function printEvalCurrent() {
     total: scores.reduce((a, b) => a + b, 0),
   };
   const rec = await fetchRecForTeacher(currentTeacher.id);
-  printEvalData(currentTeacher, tempEval, data, rec);
+  // 현재 로그인한 인사위원 본인의 서명 직접 조회
+  const { data: { user } } = await sb.auth.getUser();
+  let signature = null;
+  if (user) {
+    const { data: profileData } = await sb.from('profiles').select('signature_base64').eq('id', user.id).maybeSingle();
+    signature = profileData?.signature_base64 || null;
+  }
+  printEvalData(currentTeacher, tempEval, data, rec, signature);
 }
 
 async function printEval(teacherId, evaluatorName) {
@@ -2439,10 +2592,11 @@ async function printEval(teacherId, evaluatorName) {
   const ev = data.evals.find(e => e.evaluatorName === evName && e.teacherId === teacherId);
   if (!teacher || !ev) return;
   const rec = await fetchRecForTeacher(teacher.id);
-  printEvalData(teacher, ev, data, rec);
+  const signature = await fetchSignatureForEvaluator(evName);
+  printEvalData(teacher, ev, data, rec, signature);
 }
 
-function printEvalData(teacher, ev, data, rec) {
+function printEvalData(teacher, ev, data, rec, signature) {
   rec = rec || (data.recommendations || []).find(r => r.teacherId === teacher.id) || {};
   const gradeLabel = (score) => {
     if (score >= 17) return '매우우수';
@@ -2563,7 +2717,12 @@ function printEvalData(teacher, ev, data, rec) {
 </table>
 
 <div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
-<div class="sign-row">평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${evaluatorName} &nbsp;&nbsp;&nbsp; (서명)</div>
+<div class="sign-row" style="display:flex;align-items:center;gap:16px">
+  <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${evaluatorName}</span>
+  ${signature
+    ? `<img src="${signature}" alt="서명" style="height:48px;max-width:120px;object-fit:contain;vertical-align:middle">`
+    : `<span style="display:inline-block;border:1px solid #999;width:80px;height:40px;text-align:center;line-height:40px;font-size:10pt;color:#bbb">(서명)</span>`}
+</div>
 
 <button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
 </body>
