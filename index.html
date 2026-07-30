@@ -2471,7 +2471,7 @@ async function printResult(teacherId) {
   .num-cell { text-align: center; width: 20px; font-weight: bold; }
   .criteria-name { text-align: center; width: 60px; font-weight: bold; word-break: keep-all; font-size: 8pt; }
   .sub-item { font-size: 8pt; }
-  .avg-col { text-align: center; width: 36px; font-weight: bold; font-size: 9pt; }
+  .avg-col { text-align: center; width: 28px; font-weight: bold; font-size: 8.5pt; }
   .total-row td { font-weight: bold; background: #f9f9f9; }
   .note-row { font-size: 7.5pt; color: #555; padding: 2px 4px; }
   .legend { font-size: 8pt; margin-bottom: 4px; }
@@ -2550,7 +2550,7 @@ ${teacherEvals.map(ev => {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=800,height=900');
+  const win = window.open('', '_blank', 'width=900,height=950');
   win.document.write(html);
   win.document.close();
 }
