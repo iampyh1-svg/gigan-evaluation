@@ -2430,6 +2430,11 @@ async function printResult(teacherId) {
     return '-';
   };
 
+  const avgScoreCell = (avg, colGrade) => {
+    const g = gradeLabel(avg);
+    return g === colGrade ? `<td class="avg-col" style="text-align:center;font-weight:bold">${avg.toFixed(2)}</td>` : `<td class="avg-col"></td>`;
+  };
+
   const criteriaRows = CRITERIA.map((name, ci) => {
     const subs = SUB_ITEMS[ci];
     const avg = avgScores[ci];
@@ -2437,7 +2442,7 @@ async function printResult(teacherId) {
       <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
       <td class="criteria-name" rowspan="${subs.length}">${name}</td>
       <td class="sub-item">${subs[0]}</td>
-      <td class="avg-col" rowspan="${subs.length}">${avg.toFixed(2)}<br><span style="font-size:8pt;color:#555">(${gradeLabel(avg)})</span></td>
+      ${['매우우수','우수','보통','미흡','매우미흡'].map(g => `<td class="avg-col" rowspan="${subs.length}" style="text-align:center;font-weight:bold">${gradeLabel(avg)===g ? avg.toFixed(2) : ''}</td>`).join('')}
     </tr>`;
     for (let i = 1; i < subs.length; i++) {
       html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
@@ -2509,19 +2514,23 @@ async function printResult(teacherId) {
 <table class="main-table">
   <thead>
     <tr>
-      <th>순</th>
-      <th colspan="2">평 가 요 소</th>
-      <th>평가결과<br><span style="font-weight:normal;font-size:8pt">(평균점수)</span></th>
+      <th rowspan="2">순</th>
+      <th colspan="2" rowspan="2">평 가 요 소</th>
+      <th colspan="5">점수</th>
+    </tr>
+    <tr>
+      <th>매우우수</th>
+      <th>우수</th>
+      <th>보통</th>
+      <th>미흡</th>
+      <th>매우미흡</th>
     </tr>
   </thead>
   <tbody>
     ${criteriaRows}
     <tr class="total-row">
-      <td colspan="2" style="text-align:center">총 점 (합계)</td>
-      <td style="font-size:8.5pt;color:#555">※ 소수점 셋째자리에서 반올림</td>
-      <td style="text-align:center;font-size:13pt">${avgTotal.toFixed(2)}점<br>
-        <span style="font-size:9pt;font-weight:normal">(${gradeLabel(avgTotal)})</span>
-      </td>
+      <td colspan="3" style="text-align:center">총 점 (합계)</td>
+      <td colspan="5" style="text-align:center;font-size:13pt">( ${avgTotal.toFixed(2)} )점</td>
     </tr>
   </tbody>
 </table>
