@@ -2458,33 +2458,33 @@ async function printResult(teacherId) {
 <meta charset="UTF-8">
 <title>기간제교원 근무 평가서(결과) - ${teacher.name}</title>
 <style>
-  @page { size: A4; margin: 15mm 18mm; }
+  @page { size: A4; margin: 10mm 15mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 10pt; color: #000; }
-  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
-  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 70px; }
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 4px 6px; font-size: 9.5pt; vertical-align: middle; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 9pt; color: #000; }
+  h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 6px; letter-spacing: 2px; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .info-table td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 60px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 2px 4px; font-size: 8.5pt; vertical-align: middle; }
   .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
-  .num-cell { text-align: center; width: 24px; font-weight: bold; }
-  .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
-  .sub-item { font-size: 9pt; }
-  .avg-col { text-align: center; width: 40px; font-weight: bold; font-size: 10pt; }
+  .num-cell { text-align: center; width: 20px; font-weight: bold; }
+  .criteria-name { text-align: center; width: 60px; font-weight: bold; word-break: keep-all; font-size: 8pt; }
+  .sub-item { font-size: 8pt; }
+  .avg-col { text-align: center; width: 36px; font-weight: bold; font-size: 9pt; }
   .total-row td { font-weight: bold; background: #f9f9f9; }
-  .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
-  .legend { font-size: 9pt; margin-bottom: 6px; }
-  .sign-row { font-size: 10pt; margin-top: 10px; }
-  .evaluators-note { font-size: 9pt; color: #444; margin-bottom: 8px; }
+  .note-row { font-size: 7.5pt; color: #555; padding: 2px 4px; }
+  .legend { font-size: 8pt; margin-bottom: 4px; }
+  .sign-row { font-size: 9pt; margin-top: 6px; }
+  .evaluators-note { font-size: 8pt; color: #444; margin-bottom: 4px; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none; }
   }
   .print-btn {
-    display: block; margin: 16px auto 0; padding: 10px 32px;
+    display: block; margin: 10px auto 0; padding: 8px 28px;
     background: #1a5276; color: white; border: none; border-radius: 8px;
-    font-size: 14px; cursor: pointer; font-family: inherit;
+    font-size: 13px; cursor: pointer; font-family: inherit;
   }
 </style>
 </head>
@@ -2667,33 +2667,33 @@ function printEvalData(teacher, ev, data, rec, signature) {
 <meta charset="UTF-8">
 <title>기간제교원 근무 평가서</title>
 <style>
-  @page { size: A4; margin: 15mm 18mm; }
+  @page { size: A4; margin: 10mm 15mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 10pt; color: #000; }
-  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
-  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; white-space: nowrap; width: 60px; }
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 4px 6px; font-size: 9.5pt; vertical-align: middle; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 9pt; color: #000; }
+  h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 6px; letter-spacing: 2px; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .info-table td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; white-space: nowrap; width: 55px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 2px 4px; font-size: 8.5pt; vertical-align: middle; }
   .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
-  .num-cell { text-align: center; width: 24px; font-weight: bold; }
-  .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
-  .sub-item { font-size: 9pt; }
-  .score-col { text-align: center; width: 44px; font-weight: bold; font-size: 10pt; }
+  .num-cell { text-align: center; width: 20px; font-weight: bold; }
+  .criteria-name { text-align: center; width: 60px; font-weight: bold; word-break: keep-all; font-size: 8pt; }
+  .sub-item { font-size: 8pt; }
+  .score-col { text-align: center; width: 36px; font-weight: bold; font-size: 9pt; }
   .score-checked { font-weight: bold; }
   .total-row td { font-weight: bold; }
-  .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
-  .legend { font-size: 9pt; margin-bottom: 8px; }
-  .sign-row { font-size: 10pt; margin-top: 10px; border: 1px solid #000; padding: 7px 12px; }
+  .note-row { font-size: 7.5pt; color: #555; padding: 2px 4px; }
+  .legend { font-size: 8pt; margin-bottom: 4px; }
+  .sign-row { font-size: 9pt; margin-top: 6px; border: 1px solid #000; padding: 5px 10px; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none; }
   }
   .print-btn {
-    display: block; margin: 16px auto 0; padding: 10px 32px;
+    display: block; margin: 10px auto 0; padding: 8px 28px;
     background: #1a5276; color: white; border: none; border-radius: 8px;
-    font-size: 14px; cursor: pointer; font-family: inherit;
+    font-size: 13px; cursor: pointer; font-family: inherit;
   }
 </style>
 </head>
