@@ -2347,19 +2347,17 @@ async function printResult(teacherId) {
 <table class="info-table">
   <tr>
     <td class="lbl">학교명</td>
-    <td colspan="3">전주기전여자고등학교</td>
+    <td>전주기전여자고등학교</td>
     <td class="lbl">성명</td>
     <td>${teacher.name}</td>
-    <td class="lbl">담당과목</td>
-    <td>${teacher.subject || ''}</td>
+    <td class="lbl">성별</td>
+    <td>${rec.gender || ''}</td>
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${rec.contract || computeFixedContract(year)}</td>
-    <td class="lbl">성별</td>
-    <td>${rec.gender || ''}</td>
+    <td>${rec.contract || computeFixedContract(year)}</td>
     <td class="lbl">생년월일</td>
-    <td>${formatBirth(rec.birth)}</td>
+    <td colspan="3">${formatBirth(rec.birth)}</td>
   </tr>
 </table>
 
