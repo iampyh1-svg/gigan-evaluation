@@ -2609,7 +2609,7 @@ function printEvalData(teacher, ev, data, rec, signature) {
 
   const scoreCell = (score, colGrade) => {
     const g = gradeLabel(score);
-    return g === colGrade ? `<td class="score-col score-checked">${score}</td>` : `<td class="score-col"></td>`;
+    return g === colGrade ? `<td class="score-col score-checked">○</td>` : `<td class="score-col"></td>`;
   };
 
   const criteriaRows = CRITERIA.map((name, ci) => {
