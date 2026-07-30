@@ -2394,7 +2394,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeChangePwModal();
 });
 
-// ==================== 결과 출력 (관리자용 평균 집계) ====================
+// ==================== 결과 출력 (인사위원별 평가서 전체 출력) ====================
 async function printResult(teacherId) {
   const data = loadData();
   const teacher = data.teachers.find(t => t.id === teacherId);
@@ -2414,14 +2414,8 @@ async function printResult(teacherId) {
 
   const year = data.evalYear || '2026';
 
-  // 항목별 평균 (소수점 둘째자리 반올림)
-  const avgScores = CRITERIA.map((_, i) => {
-    const sum = teacherEvals.reduce((a, e) => a + (e.scores[i] || 0), 0);
-    return Math.round((sum / teacherEvals.length) * 100) / 100;
-  });
-  const avgTotal = Math.round(avgScores.reduce((a, b) => a + b, 0) * 100) / 100;
-
-  const gradeLabel = (score) => {
+  // 인사위원별 개별 평가서 페이지 생성
+  const gradeLabel_r = (score) => {
     if (score >= 17) return '매우우수';
     if (score >= 13) return '우수';
     if (score >= 9)  return '보통';
@@ -2430,125 +2424,101 @@ async function printResult(teacherId) {
     return '-';
   };
 
-  const criteriaRows = CRITERIA.map((name, ci) => {
-    const subs = SUB_ITEMS[ci];
-    const avg = avgScores[ci];
-    const g = gradeLabel(avg);
-    const avgCells = ['매우우수','우수','보통','미흡','매우미흡'].map(col =>
-      `<td class="avg-col${g===col?' score-checked':''}" rowspan="${subs.length}" style="text-align:center;vertical-align:middle;font-weight:bold">${g===col ? avg.toFixed(2) : ''}</td>`
-    ).join('');
-    let html = `<tr>
-      <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
-      <td class="criteria-name" rowspan="${subs.length}">${name}</td>
-      <td class="sub-item">${subs[0]}</td>
-      ${avgCells}
-    </tr>`;
-    for (let i = 1; i < subs.length; i++) {
-      html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
-    }
-    if (ci === 2) {
-      html += `<tr><td colspan="4" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능(제출 시 삭제)</td></tr>`;
-    }
-    return html;
-  }).join('');
+  const makeOnePage = (ev, sig) => {
+    const evaluator = (data.evaluators || []).find(e => e.name === ev.evaluatorName);
+    const evalRole = evaluator?.role || '교사';
+    const rows = CRITERIA.map((name, ci) => {
+      const subs = SUB_ITEMS[ci];
+      const score = ev.scores[ci] || 0;
+      const g = gradeLabel_r(score);
+      const scoreCells = ['매우우수','우수','보통','미흡','매우미흡'].map(col =>
+        `<td class="score-col${g===col?' score-checked':''}" rowspan="${subs.length}" style="text-align:center;vertical-align:middle">${g===col ? score : ''}</td>`
+      ).join('');
+      let html = `<tr>
+        <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
+        <td class="criteria-name" rowspan="${subs.length}">${name}</td>
+        <td class="sub-item">${subs[0]}</td>${scoreCells}</tr>`;
+      for (let i = 1; i < subs.length; i++) {
+        html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
+      }
+      if (ci === 2) html += `<tr><td colspan="7" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능</td></tr>`;
+      return html;
+    }).join('');
 
-  const html = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>기간제교원 근무 평가서(결과) - ${teacher.name}</title>
-<style>
-  @page { size: A4; margin: 10mm 15mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 9pt; color: #000; }
-  h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 6px; letter-spacing: 2px; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .info-table td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
-  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 60px; }
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 2px 4px; font-size: 8.5pt; vertical-align: middle; }
-  .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
-  .num-cell { text-align: center; width: 20px; font-weight: bold; }
-  .criteria-name { text-align: center; width: 60px; font-weight: bold; word-break: keep-all; font-size: 8pt; }
-  .sub-item { font-size: 8pt; }
-  .avg-col { text-align: center; width: 28px; font-weight: bold; font-size: 8.5pt; }
-  .total-row td { font-weight: bold; background: #f9f9f9; }
-  .note-row { font-size: 7.5pt; color: #555; padding: 2px 4px; }
-  .legend { font-size: 8pt; margin-bottom: 4px; }
-  .sign-row { font-size: 9pt; margin-top: 6px; }
-  .evaluators-note { font-size: 8pt; color: #444; margin-bottom: 4px; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none; }
-  }
-  .print-btn {
-    display: block; margin: 10px auto 0; padding: 8px 28px;
-    background: #1a5276; color: white; border: none; border-radius: 8px;
-    font-size: 13px; cursor: pointer; font-family: inherit;
-  }
-</style>
-</head>
-<body>
-<h1>기간제교원 근무 평가서(결과)</h1>
-
+    return `<div class="page">
+<h1>기간제교원 근무 평가서(평가위원용)</h1>
 <table class="info-table">
   <tr>
-    <td class="lbl">학교명</td>
-    <td>전주기전여자고등학교</td>
-    <td class="lbl">성명</td>
-    <td>${teacher.name}</td>
-    <td class="lbl">성별</td>
-    <td>${rec.gender || ''}</td>
+    <td class="lbl">학교명</td><td>전주기전여자고등학교</td>
+    <td class="lbl">성명</td><td>${teacher.name}</td>
+    <td class="lbl">성별</td><td>${rec.gender||''}</td>
   </tr>
   <tr>
-    <td class="lbl">계약기간</td>
-    <td>${rec.contract || computeFixedContract(year)}</td>
-    <td class="lbl">생년월일</td>
-    <td colspan="3">${formatBirth(rec.birth)}</td>
+    <td class="lbl">계약기간</td><td>${rec.contract||computeFixedContract(year)}</td>
+    <td class="lbl">생년월일</td><td colspan="3">${formatBirth(rec.birth)}</td>
   </tr>
 </table>
-
-<div class="evaluators-note">※ 평가위원 ${teacherEvals.length}명 평균 점수 (소수점 셋째자리에서 반올림)</div>
-
 <table class="main-table">
   <thead>
-    <tr>
-      <th rowspan="2">순</th>
-      <th colspan="2" rowspan="2">평 가 요 소</th>
-      <th colspan="5">점수</th>
-    </tr>
-    <tr>
-      <th>매우우수</th>
-      <th>우수</th>
-      <th>보통</th>
-      <th>미흡</th>
-      <th>매우미흡</th>
-    </tr>
+    <tr><th rowspan="2">순</th><th colspan="2" rowspan="2">평 가 요 소</th><th colspan="5">점수</th></tr>
+    <tr><th>매우우수</th><th>우수</th><th>보통</th><th>미흡</th><th>매우미흡</th></tr>
   </thead>
   <tbody>
-    ${criteriaRows}
+    ${rows}
     <tr class="total-row">
       <td colspan="3" style="text-align:center">총 점 (합계)</td>
-      <td colspan="5" style="text-align:center;font-size:13pt">( ${avgTotal.toFixed(2)} )점</td>
+      <td colspan="5" style="text-align:center;font-size:12pt">( ${ev.total} )점</td>
     </tr>
   </tbody>
 </table>
-
 <div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
-${teacherEvals.map(ev => {
-  const sig = evaluatorSignatures[ev.evaluatorName];
-  const role = ev.evaluatorRole || '교사';
-  return `<div class="sign-row" style="display:flex;align-items:center;gap:16px;margin-top:6px">
-    <span>인사위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${role} &nbsp;&nbsp; 성명: ${ev.evaluatorName}</span>
-    ${sig
-      ? `<img src="${sig}" alt="서명" style="height:48px;max-width:120px;object-fit:contain;vertical-align:middle">`
-      : `<span style="display:inline-block;border:1px solid #999;width:60px;height:36px;text-align:center;line-height:36px;font-size:9pt;color:#bbb">(인)</span>`}
-  </div>`;
-}).join('')}
+<div class="sign-row" style="display:flex;align-items:center;gap:16px">
+  <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${ev.evaluatorName}</span>
+  ${sig ? `<img src="${sig}" alt="서명" style="height:44px;max-width:110px;object-fit:contain;vertical-align:middle">` :
+          `<span style="display:inline-block;border:1px solid #999;width:70px;height:36px;text-align:center;line-height:36px;font-size:9pt;color:#bbb">(서명)</span>`}
+</div>
+</div>`;
+  };
 
+  const pages = teacherEvals.map((ev, i) =>
+    makeOnePage(ev, evaluatorSignatures[ev.evaluatorName])
+  ).join('');
+
+  // (avgTotal 더 이상 사용 안 함)
+  const avgTotal = 0;
+
+  const html = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<title>기간제교원 근무 평가서 - ${teacher.name}</title>
+<style>
+  @page { size: A4; margin: 10mm 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: '맑은 고딕','Malgun Gothic',sans-serif; font-size: 9pt; color: #000; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: avoid; }
+  h1 { text-align:center; font-size:14pt; font-weight:bold; margin-bottom:6px; letter-spacing:2px; }
+  .info-table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+  .info-table td { border:1px solid #000; padding:3px 6px; font-size:9pt; }
+  .lbl { background:#f2f2f2; font-weight:bold; text-align:center; white-space:nowrap; width:55px; }
+  .main-table { width:100%; border-collapse:collapse; margin-bottom:4px; }
+  .main-table th,.main-table td { border:1px solid #000; padding:2px 4px; font-size:8.5pt; vertical-align:middle; }
+  .main-table th { background:#f2f2f2; text-align:center; font-weight:bold; }
+  .num-cell { text-align:center; width:20px; font-weight:bold; }
+  .criteria-name { text-align:center; width:60px; font-weight:bold; word-break:keep-all; font-size:8pt; }
+  .sub-item { font-size:8pt; }
+  .score-col { text-align:center; width:36px; font-weight:bold; }
+  .score-checked { font-weight:bold; }
+  .total-row td { font-weight:bold; }
+  .note-row { font-size:7.5pt; color:#555; padding:2px 4px; }
+  .legend { font-size:8pt; margin-bottom:4px; }
+  .sign-row { font-size:9pt; margin-top:6px; border:1px solid #000; padding:5px 10px; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .no-print { display:none; } }
+  .print-btn { display:block; margin:10px auto 0; padding:8px 28px; background:#1a5276; color:white; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
+</style></head><body>
+${pages}
 <button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
-</body>
-</html>`;
+</body></html>`;
+
 
   const win = window.open('', '_blank', 'width=900,height=950');
   win.document.write(html);
