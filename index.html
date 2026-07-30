@@ -2257,7 +2257,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ==================== 결과 출력 (관리자용 평균 집계) ====================
-function printResult(teacherId) {
+async function printResult(teacherId) {
   const data = loadData();
   const teacher = data.teachers.find(t => t.id === teacherId);
   if (!teacher) return;
@@ -2266,6 +2266,7 @@ function printResult(teacherId) {
     alert('아직 제출된 평가가 없습니다.');
     return;
   }
+  const rec = await fetchRecForTeacher(teacherId);
 
   const year = data.evalYear || '2026';
   const principal = data.principalName || '';
