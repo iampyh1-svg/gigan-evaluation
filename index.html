@@ -2463,7 +2463,8 @@ function printEvalData(teacher, ev, data) {
   }).join('');
 
   const year = data.evalYear || '2026';
-  const evaluator = data.evaluators.find(e => e.name === currentUser);
+  const evaluatorName = ev.evaluatorName;
+  const evaluator = (data.evaluators || []).find(e => e.name === evaluatorName);
   const evalRole = evaluator?.role || '교사';
 
   const html = `<!DOCTYPE html>
@@ -2478,19 +2479,19 @@ function printEvalData(teacher, ev, data) {
   h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
   .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
   .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
-  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; width: 70px; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; white-space: nowrap; width: 60px; }
   .main-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
   .main-table th, .main-table td { border: 1px solid #000; padding: 4px 6px; font-size: 9.5pt; vertical-align: middle; }
   .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
   .num-cell { text-align: center; width: 24px; font-weight: bold; }
   .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
   .sub-item { font-size: 9pt; }
-  .score-col { text-align: center; width: 48px; font-weight: bold; font-size: 10pt; }
-  .score-checked { background: #e8f4fd; color: #1a5276; font-weight: bold; }
-  .total-row td { font-weight: bold; background: #f9f9f9; }
+  .score-col { text-align: center; width: 44px; font-weight: bold; font-size: 10pt; }
+  .score-checked { font-weight: bold; }
+  .total-row td { font-weight: bold; }
   .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
   .legend { font-size: 9pt; margin-bottom: 8px; }
-  .sign-row { font-size: 10pt; margin-top: 10px; }
+  .sign-row { font-size: 10pt; margin-top: 10px; border: 1px solid #000; padding: 7px 12px; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none; }
@@ -2508,17 +2509,15 @@ function printEvalData(teacher, ev, data) {
 <table class="info-table">
   <tr>
     <td class="lbl">학교명</td>
-    <td colspan="3">전주기전여자고등학교</td>
+    <td>전주기전여자고등학교</td>
     <td class="lbl">성명</td>
     <td>${teacher.name}</td>
-    <td class="lbl">담당과목</td>
-    <td>${teacher.subject || ''}</td>
+    <td class="lbl">성별</td>
+    <td>${rec.gender || ''}</td>
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
     <td colspan="3">${rec.contract || computeFixedContract(year)}</td>
-    <td class="lbl">성별</td>
-    <td>${rec.gender || ''}</td>
     <td class="lbl">생년월일</td>
     <td>${formatBirth(rec.birth)}</td>
   </tr>
@@ -2527,28 +2526,29 @@ function printEvalData(teacher, ev, data) {
 <table class="main-table">
   <thead>
     <tr>
-      <th>순</th>
-      <th colspan="2">평 가 요 소</th>
-      <th>매우우수<br><span style="font-weight:normal;font-size:8pt">(17~20점)</span></th>
-      <th>우수<br><span style="font-weight:normal;font-size:8pt">(13~16점)</span></th>
-      <th>보통<br><span style="font-weight:normal;font-size:8pt">(9~12점)</span></th>
-      <th>미흡<br><span style="font-weight:normal;font-size:8pt">(5~8점)</span></th>
-      <th>매우미흡<br><span style="font-weight:normal;font-size:8pt">(1~4점)</span></th>
+      <th rowspan="2">순</th>
+      <th colspan="2" rowspan="2">평 가 요 소</th>
+      <th colspan="5">점수</th>
+    </tr>
+    <tr>
+      <th>매우우수</th>
+      <th>우수</th>
+      <th>보통</th>
+      <th>미흡</th>
+      <th>매우미흡</th>
     </tr>
   </thead>
   <tbody>
     ${criteriaRows}
     <tr class="total-row">
-      <td colspan="3" style="text-align:center;font-weight:bold">총 점 (합계)</td>
-      <td colspan="5" style="text-align:center;font-size:13pt">${ev.total}점 &nbsp;
-        <span style="font-size:10pt;font-weight:normal">(${gradeLabel(ev.total)})</span>
-      </td>
+      <td colspan="3" style="text-align:center">총 점 (합계)</td>
+      <td colspan="5" style="text-align:center;font-size:13pt">( ${ev.total} )점</td>
     </tr>
   </tbody>
 </table>
 
 <div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
-<div class="sign-row">평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${currentUser} &nbsp;&nbsp;&nbsp; (서명)</div>
+<div class="sign-row">평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${evaluatorName} &nbsp;&nbsp;&nbsp; (서명)</div>
 
 <button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
 </body>
