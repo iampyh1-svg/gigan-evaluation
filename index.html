@@ -2406,8 +2406,13 @@ async function printResult(teacherId) {
   }
   const rec = await fetchRecForTeacher(teacherId);
 
+  // 인사위원별 서명 조회
+  const evaluatorSignatures = {};
+  for (const ev of teacherEvals) {
+    evaluatorSignatures[ev.evaluatorName] = await fetchSignatureForEvaluator(ev.evaluatorName);
+  }
+
   const year = data.evalYear || '2026';
-  const principal = data.principalName || '';
 
   // 항목별 평균 (소수점 둘째자리 반올림)
   const avgScores = CRITERIA.map((_, i) => {
@@ -2522,7 +2527,16 @@ async function printResult(teacherId) {
 </table>
 
 <div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
-<div class="sign-row">확인자 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: 학교장 &nbsp;&nbsp; 성명: ${principal} &nbsp;&nbsp;&nbsp; (서명)</div>
+${teacherEvals.map(ev => {
+  const sig = evaluatorSignatures[ev.evaluatorName];
+  const role = ev.evaluatorRole || '교사';
+  return `<div class="sign-row" style="display:flex;align-items:center;gap:16px;margin-top:6px">
+    <span>인사위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${role} &nbsp;&nbsp; 성명: ${ev.evaluatorName}</span>
+    ${sig
+      ? `<img src="${sig}" alt="서명" style="height:48px;max-width:120px;object-fit:contain;vertical-align:middle">`
+      : `<span style="display:inline-block;border:1px solid #999;width:60px;height:36px;text-align:center;line-height:36px;font-size:9pt;color:#bbb">(인)</span>`}
+  </div>`;
+}).join('')}
 
 <button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
 </body>
