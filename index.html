@@ -2517,9 +2517,9 @@ function printEvalData(teacher, ev, data) {
   </tr>
   <tr>
     <td class="lbl">계약기간</td>
-    <td colspan="3">${rec.contract || computeFixedContract(year)}</td>
+    <td>${rec.contract || computeFixedContract(year)}</td>
     <td class="lbl">생년월일</td>
-    <td>${formatBirth(rec.birth)}</td>
+    <td colspan="3">${formatBirth(rec.birth)}</td>
   </tr>
 </table>
 
