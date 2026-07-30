@@ -2430,19 +2430,18 @@ async function printResult(teacherId) {
     return '-';
   };
 
-  const avgScoreCell = (avg, colGrade) => {
-    const g = gradeLabel(avg);
-    return g === colGrade ? `<td class="avg-col" style="text-align:center;font-weight:bold">${avg.toFixed(2)}</td>` : `<td class="avg-col"></td>`;
-  };
-
   const criteriaRows = CRITERIA.map((name, ci) => {
     const subs = SUB_ITEMS[ci];
     const avg = avgScores[ci];
+    const g = gradeLabel(avg);
+    const avgCells = ['매우우수','우수','보통','미흡','매우미흡'].map(col =>
+      `<td class="avg-col${g===col?' score-checked':''}" rowspan="${subs.length}" style="text-align:center;vertical-align:middle;font-weight:bold">${g===col ? avg.toFixed(2) : ''}</td>`
+    ).join('');
     let html = `<tr>
       <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
       <td class="criteria-name" rowspan="${subs.length}">${name}</td>
       <td class="sub-item">${subs[0]}</td>
-      ${['매우우수','우수','보통','미흡','매우미흡'].map(g => `<td class="avg-col" rowspan="${subs.length}" style="text-align:center;font-weight:bold">${gradeLabel(avg)===g ? avg.toFixed(2) : ''}</td>`).join('')}
+      ${avgCells}
     </tr>`;
     for (let i = 1; i < subs.length; i++) {
       html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
@@ -2472,7 +2471,7 @@ async function printResult(teacherId) {
   .num-cell { text-align: center; width: 24px; font-weight: bold; }
   .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
   .sub-item { font-size: 9pt; }
-  .avg-col { text-align: center; width: 90px; font-weight: bold; font-size: 11pt; }
+  .avg-col { text-align: center; width: 40px; font-weight: bold; font-size: 10pt; }
   .total-row td { font-weight: bold; background: #f9f9f9; }
   .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
   .legend { font-size: 9pt; margin-bottom: 6px; }
@@ -2638,15 +2637,18 @@ function printEvalData(teacher, ev, data, rec, signature) {
   const criteriaRows = CRITERIA.map((name, ci) => {
     const score = ev.scores[ci] || 0;
     const subs = SUB_ITEMS[ci];
-    const grades = ['매우우수','우수','보통','미흡','매우미흡'];
+    const g = gradeLabel(score);
+    const scoreCells = ['매우우수','우수','보통','미흡','매우미흡'].map(col =>
+      `<td class="score-col${g===col?' score-checked':''}" rowspan="${subs.length}" style="text-align:center;vertical-align:middle">${g===col ? score : ''}</td>`
+    ).join('');
     let html = `<tr>
       <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
       <td class="criteria-name" rowspan="${subs.length}">${name}</td>
       <td class="sub-item">${subs[0]}</td>
-      ${grades.map(g => scoreCell(score, g)).join('')}
+      ${scoreCells}
     </tr>`;
     for (let i = 1; i < subs.length; i++) {
-      html += `<tr><td class="sub-item">${subs[i]}</td>${grades.map(() => '<td class="score-col"></td>').join('')}</tr>`;
+      html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
     }
     if (ci === 2) {
       html += `<tr><td colspan="7" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능</td></tr>`;
