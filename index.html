@@ -1683,28 +1683,27 @@ async function printEvalResult(teacherId) {
   const year = data.evalYear || '2026';
   const principal = data.principalName || '';
 
-  // 항목별 평균 계산 (소수점 둘째자리)
   const avgScores = CRITERIA.map((_, ci) => {
     const sum = teacherEvals.reduce((a, e) => a + (e.scores[ci] || 0), 0);
     return Math.round((sum / teacherEvals.length) * 100) / 100;
   });
-  // 총점: 소수점 셋째자리에서 반올림 → 소수점 둘째자리
-  const rawTotal = avgScores.reduce((a, b) => a + b, 0);
-  const avgTotal = Math.round(rawTotal * 100) / 100;
+  const avgTotal = Math.round(avgScores.reduce((a, b) => a + b, 0) * 100) / 100;
 
+  // 6-컬럼 단일 표: col1(순/라벨) | col2(요소명/학교명값) | col3(세부항목) | col4(성명라벨) | col5(성명값) | col6(성별+평가결과)
   const criteriaRows = CRITERIA.map((name, ci) => {
     const subs = SUB_ITEMS[ci];
     const avg = avgScores[ci].toFixed(2);
+    const critLabel = name.replace(' 및 ', ' 및<br>').replace('로서의 ', '로서의<br>').replace('간의 ', '간의<br>');
     let html = `<tr>
       <td class="num-cell" rowspan="${subs.length}">${ci+1}</td>
-      <td class="crit-name" rowspan="${subs.length}">${name.replace('및\n', '및<br>')}</td>
-      <td class="sub-item">${subs[0]}</td>
+      <td class="crit-name" rowspan="${subs.length}">${critLabel}</td>
+      <td class="sub-item" colspan="3">${subs[0]}</td>
       <td class="avg-cell" rowspan="${subs.length}">${avg}</td>
     </tr>`;
     for (let i = 1; i < subs.length; i++) {
-      html += `<tr><td class="sub-item">${subs[i]}</td></tr>`;
+      html += `<tr><td class="sub-item" colspan="3">${subs[i]}</td></tr>`;
     }
-    if (ci === 2) html += `<tr><td colspan="4" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능</td></tr>`;
+    if (ci === 2) html += `<tr><td colspan="6" class="note-row">※ 학습지도 평가요소에서 영양과목은 학교자체적으로 영양과 관련된 내용으로 평가 가능</td></tr>`;
     return html;
   }).join('');
 
@@ -1716,60 +1715,66 @@ async function printEvalResult(teacherId) {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: '맑은 고딕','Malgun Gothic',sans-serif; font-size: 10pt; color: #000;
          display: flex; flex-direction: column; min-height: 267mm; }
-  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 10px; letter-spacing: 6px; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
-  .lbl { font-weight: bold; text-align: center; white-space: nowrap; width: 58px; }
   .main-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 5px 6px; font-size: 9.5pt; vertical-align: middle; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 5px 7px; font-size: 9.5pt; vertical-align: middle; }
   .main-table th { text-align: center; font-weight: bold; }
-  .num-cell { text-align: center; width: 26px; font-weight: bold; vertical-align: middle; }
-  .crit-name { text-align: center; width: 68px; font-weight: bold; word-break: keep-all; vertical-align: middle; font-size: 9pt; }
+  .title-cell { text-align: center; font-size: 16pt; font-weight: bold; letter-spacing: 6px;
+                padding: 10px 0; border: 1px solid #000; }
+  .lbl { font-weight: bold; text-align: center; white-space: nowrap; }
+  .num-cell { text-align: center; font-weight: bold; vertical-align: middle; }
+  .crit-name { text-align: center; font-weight: bold; word-break: keep-all; vertical-align: middle; font-size: 9pt; }
   .sub-item { padding: 4px 8px; line-height: 1.5; }
-  .avg-cell { text-align: center; width: 66px; font-weight: bold; font-size: 10pt; vertical-align: middle; }
+  .avg-cell { text-align: center; font-weight: bold; font-size: 10pt; vertical-align: middle; }
   .note-row { font-size: 8.5pt; color: #333; padding: 3px 6px; }
-  .total-row td { font-weight: bold; }
   .legend { font-size: 9pt; margin: 6px 0 8px; }
   .sign-box { border: 1px solid #000; padding: 10px 16px; font-size: 10pt; margin-top: auto; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head><body>
-<h1>기간제교원  근무  평가서(결과)</h1>
-<table class="info-table">
-  <tr>
-    <td class="lbl">학교명</td>
-    <td>전주기전여자고등학교</td>
-    <td class="lbl">성명</td>
-    <td>${teacher.name}</td>
-    <td class="lbl">성별</td>
-    <td style="width:30px">${rec.gender || ''}</td>
-  </tr>
-  <tr>
-    <td class="lbl">계약기간</td>
-    <td>${rec.contract || computeFixedContract(year)}</td>
-    <td class="lbl">생년월일</td>
-    <td colspan="3">${formatBirth(rec.birth)}</td>
-  </tr>
-</table>
-<br>
 <table class="main-table">
-  <thead>
-    <tr>
-      <th style="width:26px">순</th>
-      <th colspan="2">평 &nbsp; 가 &nbsp; 요 &nbsp; 소</th>
-      <th style="width:66px">평가결과<br><span style="font-weight:normal;font-size:8pt">(평균점수)</span></th>
-    </tr>
-  </thead>
+  <colgroup>
+    <col style="width:42px">
+    <col style="width:74px">
+    <col>
+    <col style="width:52px">
+    <col style="width:72px">
+    <col style="width:64px">
+  </colgroup>
   <tbody>
+    <!-- 제목 -->
+    <tr><td colspan="6" class="title-cell">기간제교원  근무  평가서(결과)</td></tr>
+    <!-- 정보 행 1 -->
+    <tr>
+      <td class="lbl">학교명</td>
+      <td colspan="2">전주기전여자고등학교</td>
+      <td class="lbl">성명</td>
+      <td>${teacher.name}</td>
+      <td style="text-align:center">성별&nbsp;&nbsp;${rec.gender || ''}</td>
+    </tr>
+    <!-- 정보 행 2 -->
+    <tr>
+      <td class="lbl">계약기간</td>
+      <td colspan="2">${rec.contract || computeFixedContract(year)}</td>
+      <td class="lbl">생년월일</td>
+      <td colspan="2">${formatBirth(rec.birth)}</td>
+    </tr>
+    <!-- 평가표 헤더 -->
+    <tr>
+      <th>순</th>
+      <th colspan="4">평 &nbsp;가 &nbsp;요 &nbsp;소</th>
+      <th>평가결과<br><span style="font-weight:normal;font-size:8pt">(평균점수)</span></th>
+    </tr>
+    <!-- 평가 데이터 -->
     ${criteriaRows}
-    <tr class="total-row" style="height:52px">
-      <td colspan="3" style="text-align:center;vertical-align:middle">
-        <div style="font-size:12pt;font-weight:bold">총 점 &nbsp;(합계)</div>
-        <div style="font-size:8.5pt;font-weight:normal;margin-top:4px">※소수점 셋째자리에서 반올림</div>
+    <!-- 총점 행 -->
+    <tr style="height:52px">
+      <td colspan="1" style="text-align:center;vertical-align:middle;font-weight:bold;font-size:10.5pt">
+        총 점<br>(합계)
       </td>
-      <td style="text-align:center;vertical-align:middle">
-        <div style="font-size:11pt;font-weight:bold">( ${avgTotal} )</div>
-        <div style="font-size:10pt;font-weight:bold">점</div>
+      <td colspan="5" style="vertical-align:middle;padding-left:16px">
+        <span style="font-size:8.5pt">※소수점 셋째자리에서 반올림</span>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <span style="font-size:12pt;font-weight:bold">( ${avgTotal} )점</span>
       </td>
     </tr>
   </tbody>
