@@ -2383,7 +2383,7 @@ function openRecommendPrint(rec, data) {
 <table>
   <tr>
     <td class="lbl" width="100">심사 여부</td>
-    <td>${rec.review || ''} &nbsp;<span style="font-size:8.5pt;color:#555">(필수 작성: O / X)</span></td>
+    <td>O</td>
   </tr>
   <tr>
     <td class="lbl">내부결재<br>공문번호</td>
@@ -2409,7 +2409,6 @@ function openRecommendPrint(rec, data) {
 <div class="footer-text" style="margin-top:16px">${year} &nbsp;&nbsp; 년 &nbsp;&nbsp;&nbsp;&nbsp; 월 &nbsp;&nbsp;&nbsp;&nbsp; 일</div>
 <div class="footer-text" style="margin-top:8px">추천자 &nbsp;&nbsp; 전주기전여자고등학교장 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 전북특별자치도교육감 귀하</div>
 
-<button class="print-btn" onclick="window.print()">🖨 인쇄</button>
 </body></html>`;
 
   const win = window.open('', '_blank', 'width=820,height=1000');
