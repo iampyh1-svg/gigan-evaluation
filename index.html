@@ -1682,10 +1682,12 @@ function renderSummaryTable(data) {
 
   const rows = teachers.map(t => {
     const teacherEvals = evals.filter(e => e.teacherId === t.id);
+    const rec = (data.recommendations || []).find(r => r.teacherId === t.id);
+    const subject = t.subject || rec?.subject || '-';
     if (teacherEvals.length === 0) {
       return `<tr>
         <td class="td-name">${t.name}</td>
-        <td>${t.subject || '-'}</td>
+        <td>${subject}</td>
         <td>0</td>
         ${CRITERIA.map(() => '<td>-</td>').join('')}
         <td class="td-avg">-</td>
@@ -1701,7 +1703,7 @@ function renderSummaryTable(data) {
     const grade = getTotalGrade(Math.round(parseFloat(avgTotal)));
     return `<tr>
       <td class="td-name">${t.name}</td>
-      <td>${t.subject || '-'}</td>
+      <td>${subject}</td>
       <td>${teacherEvals.length}명</td>
       ${avgScores.map(s => `<td>${s}</td>`).join('')}
       <td class="td-avg">${avgTotal}</td>
