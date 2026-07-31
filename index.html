@@ -2631,7 +2631,7 @@ async function printResult(teacherId) {
 <div class="sign-row" style="display:flex;align-items:center;gap:16px">
   <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${ev.evaluatorName}</span>
   ${sig ? `<img src="${sig}" alt="서명" style="height:44px;max-width:110px;object-fit:contain;vertical-align:middle">` :
-          `<span style="display:inline-block;border:1px solid #999;width:70px;height:36px;text-align:center;line-height:36px;font-size:9pt;color:#bbb">(서명)</span>`}
+          `<span style="font-size:9.5pt">(서명)</span>`}
 </div>
 </div>`;
   };
@@ -2877,7 +2877,7 @@ function printEvalData(teacher, ev, data, rec, signature) {
   <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${evaluatorName}</span>
   ${signature
     ? `<img src="${signature}" alt="서명" style="height:48px;max-width:120px;object-fit:contain;vertical-align:middle">`
-    : `<span style="display:inline-block;border:1px solid #999;width:80px;height:40px;text-align:center;line-height:40px;font-size:10pt;color:#bbb">(서명)</span>`}
+    : `<span style="font-size:10pt">(서명)</span>`}
 </div>
 
 </body>
