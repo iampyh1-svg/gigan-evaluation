@@ -2264,7 +2264,11 @@ async function cancelRecommendationSubmit(teacherId, teacherName) {
 
 async function deleteRecommendation(teacherId, teacherName) {
   if (!confirm(`"${teacherName || 'null'}" 추천서를 삭제하시겠습니까?`)) return;
-  const { error } = await sb.from('recommendations').delete().eq('teacher_id', teacherId);
+  const isNull = !teacherId || teacherId === 'null' || teacherId === 'undefined';
+  const query = isNull
+    ? sb.from('recommendations').delete().is('teacher_id', null)
+    : sb.from('recommendations').delete().eq('teacher_id', teacherId);
+  const { error } = await query;
   if (error) { alert('삭제 실패: ' + error.message); return; }
   await refreshRecommendations();
   renderRecommendTable(loadData());
