@@ -2539,19 +2539,25 @@ async function fetchSignatureForEvaluator(evaluatorName) {
 }
 
 async function fetchRecForTeacher(teacherId) {
-  // appData에서 먼저 찾고, 없으면 Supabase에서 직접 조회 (RLS 우회)
-  const fromCache = (appData.recommendations || []).find(r => r.teacherId === teacherId);
-  if (fromCache) return fromCache;
+  // Supabase에서 직접 최신 데이터 조회
   const { data } = await sb.from('recommendations').select('*').eq('teacher_id', teacherId).maybeSingle();
-  if (!data) return {};
-  return {
-    teacherId: data.teacher_id, teacherName: '',
-    gender: data.gender, birth: data.birth, contract: data.contract,
-    address: data.address, phone: data.phone, subject: data.subject,
-    cert: data.cert, expY: data.exp_y, expM: data.exp_m,
-    review: data.review, docnum: data.docnum, special: data.special,
-    career1: data.career1 || {}, career2: data.career2 || {}, career3: data.career3 || {},
-  };
+  if (data) {
+    return {
+      teacherId: data.teacher_id, teacherName: '',
+      gender: data.gender, birth: data.birth, contract: data.contract,
+      address: data.address, phone: data.phone, subject: data.subject,
+      cert: data.cert, expY: data.exp_y, expM: data.exp_m,
+      review: data.review, docnum: data.docnum, special: data.special,
+      career1: data.career1 || {}, career2: data.career2 || {}, career3: data.career3 || {},
+    };
+  }
+  // 캐시에서 폴백 (교사 이름으로도 검색)
+  const teacher = appData._profileById?.[teacherId];
+  if (teacher) {
+    const byName = (appData.recommendations || []).find(r => r.teacherName === teacher.name);
+    if (byName) return byName;
+  }
+  return (appData.recommendations || []).find(r => r.teacherId === teacherId) || {};
 }
 
 async function printEvalCurrent() {
