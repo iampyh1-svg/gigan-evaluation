@@ -2492,34 +2492,37 @@ async function printResult(teacherId) {
 <html lang="ko"><head><meta charset="UTF-8">
 <title>기간제교원 근무 평가서 - ${teacher.name}</title>
 <style>
-  @page { size: A4; margin: 10mm 15mm; }
+  @page { size: A4 portrait; margin: 12mm 18mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: '맑은 고딕','Malgun Gothic',sans-serif; font-size: 9pt; color: #000; }
-  .page { page-break-after: always; }
+  body { font-family: '맑은 고딕','Malgun Gothic',sans-serif; font-size: 10pt; color: #000; }
+  .page {
+    display: flex; flex-direction: column;
+    min-height: 273mm;
+    page-break-after: always;
+  }
   .page:last-child { page-break-after: avoid; }
-  h1 { text-align:center; font-size:14pt; font-weight:bold; margin-bottom:6px; letter-spacing:2px; }
-  .info-table { width:100%; border-collapse:collapse; margin-bottom:6px; }
-  .info-table td { border:1px solid #000; padding:3px 6px; font-size:9pt; }
-  .lbl { background:#f2f2f2; font-weight:bold; text-align:center; white-space:nowrap; width:55px; }
-  .main-table { width:100%; border-collapse:collapse; margin-bottom:4px; }
-  .main-table th,.main-table td { border:1px solid #000; padding:2px 4px; font-size:8.5pt; vertical-align:middle; }
-  .main-table th { background:#f2f2f2; text-align:center; font-weight:bold; }
-  .num-cell { text-align:center; width:20px; font-weight:bold; }
-  .criteria-name { text-align:center; width:60px; font-weight:bold; word-break:keep-all; font-size:8pt; }
-  .sub-item { font-size:8pt; }
-  .score-col { text-align:center; width:36px; font-weight:bold; }
+  h1 { text-align:center; font-size:15pt; font-weight:bold; margin-bottom:8px; letter-spacing:3px; }
+  .info-table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+  .info-table td { border:1px solid #000; padding:5px 8px; font-size:10pt; }
+  .lbl { background:#f2f2f2; font-weight:bold; text-align:center; white-space:nowrap; width:62px; }
+  .main-table { width:100%; border-collapse:collapse; margin-bottom:6px; flex:1; }
+  .main-table th,.main-table td { border:1px solid #000; padding:5px 6px; font-size:9.5pt; vertical-align:middle; }
+  .main-table th { background:#f2f2f2; text-align:center; font-weight:bold; font-size:9.5pt; }
+  .num-cell { text-align:center; width:24px; font-weight:bold; }
+  .criteria-name { text-align:center; width:72px; font-weight:bold; word-break:keep-all; }
+  .sub-item { padding-left:8px; line-height:1.6; }
+  .score-col { text-align:center; width:46px; font-weight:bold; font-size:10pt; }
   .score-checked { font-weight:bold; }
-  .total-row td { font-weight:bold; }
-  .note-row { font-size:7.5pt; color:#555; padding:2px 4px; }
-  .legend { font-size:8pt; margin-bottom:4px; }
-  .sign-row { font-size:9pt; margin-top:6px; border:1px solid #000; padding:5px 10px; }
-  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .no-print { display:none; } }
-  .print-btn { display:block; margin:10px auto 0; padding:8px 28px; background:#1a5276; color:white; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
-</style></head><body>
+  .total-row td { font-weight:bold; font-size:11pt; }
+  .note-row { font-size:8.5pt; color:#555; padding:3px 6px; }
+  .legend { font-size:9pt; margin-bottom:8px; }
+  .sign-row { font-size:10pt; margin-top:auto; border:1px solid #000; padding:10px 14px; display:flex; align-items:center; gap:20px; min-height:56px; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>
+<script>window.onload = function(){ window.print(); }</script>
+</head><body>
 ${pages}
-<button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
 </body></html>`;
-
 
   const win = window.open('', '_blank', 'width=900,height=950');
   win.document.write(html);
@@ -2638,35 +2641,32 @@ function printEvalData(teacher, ev, data, rec, signature) {
 <meta charset="UTF-8">
 <title>기간제교원 근무 평가서</title>
 <style>
-  @page { size: A4; margin: 10mm 15mm; }
+  @page { size: A4 portrait; margin: 12mm 18mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 9pt; color: #000; }
-  h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 6px; letter-spacing: 2px; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .info-table td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
-  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; white-space: nowrap; width: 55px; }
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 2px 4px; font-size: 8.5pt; vertical-align: middle; }
-  .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
-  .num-cell { text-align: center; width: 20px; font-weight: bold; }
-  .criteria-name { text-align: center; width: 60px; font-weight: bold; word-break: keep-all; font-size: 8pt; }
-  .sub-item { font-size: 8pt; }
-  .score-col { text-align: center; width: 36px; font-weight: bold; font-size: 9pt; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 10pt; color: #000;
+         display: flex; flex-direction: column; min-height: 273mm; }
+  h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 8px; letter-spacing: 3px; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .info-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; }
+  .info-table .lbl { background: #f2f2f2; font-weight: bold; text-align: center; white-space: nowrap; width: 62px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; flex: 1; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 5px 6px; font-size: 9.5pt; vertical-align: middle; }
+  .main-table th { background: #f2f2f2; text-align: center; font-weight: bold; font-size: 9.5pt; }
+  .num-cell { text-align: center; width: 24px; font-weight: bold; }
+  .criteria-name { text-align: center; width: 72px; font-weight: bold; word-break: keep-all; }
+  .sub-item { padding-left: 8px; line-height: 1.6; }
+  .score-col { text-align: center; width: 46px; font-weight: bold; font-size: 10pt; }
   .score-checked { font-weight: bold; }
-  .total-row td { font-weight: bold; }
-  .note-row { font-size: 7.5pt; color: #555; padding: 2px 4px; }
-  .legend { font-size: 8pt; margin-bottom: 4px; }
-  .sign-row { font-size: 9pt; margin-top: 6px; border: 1px solid #000; padding: 5px 10px; }
+  .total-row td { font-weight: bold; font-size: 11pt; }
+  .note-row { font-size: 8.5pt; color: #555; padding: 3px 6px; }
+  .legend { font-size: 9pt; margin-bottom: 8px; }
+  .sign-row { font-size: 10pt; margin-top: auto; border: 1px solid #000; padding: 10px 14px;
+              display: flex; align-items: center; gap: 20px; min-height: 56px; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none; }
-  }
-  .print-btn {
-    display: block; margin: 10px auto 0; padding: 8px 28px;
-    background: #1a5276; color: white; border: none; border-radius: 8px;
-    font-size: 13px; cursor: pointer; font-family: inherit;
   }
 </style>
+<script>window.onload = function(){ window.print(); }</script>
 </head>
 <body>
 <h1>기간제교원 근무 평가서(평가위원용)</h1>
@@ -2720,7 +2720,6 @@ function printEvalData(teacher, ev, data, rec, signature) {
     : `<span style="display:inline-block;border:1px solid #999;width:80px;height:40px;text-align:center;line-height:40px;font-size:10pt;color:#bbb">(서명)</span>`}
 </div>
 
-<button class="print-btn no-print" onclick="window.print()">🖨 인쇄</button>
 </body>
 </html>`;
 
