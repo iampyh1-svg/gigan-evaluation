@@ -2519,7 +2519,6 @@ async function printResult(teacherId) {
   .sign-row { font-size:10pt; margin-top:auto; border:1px solid #000; padding:10px 14px; display:flex; align-items:center; gap:20px; min-height:56px; }
   @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style>
-<script>window.onload = function(){ window.print(); }</script>
 </head><body>
 ${pages}
 </body></html>`;
@@ -2527,6 +2526,7 @@ ${pages}
   const win = window.open('', '_blank', 'width=900,height=950');
   win.document.write(html);
   win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 // ==================== 평가서 출력 ====================
@@ -2666,7 +2666,6 @@ function printEvalData(teacher, ev, data, rec, signature) {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
-<script>window.onload = function(){ window.print(); }</script>
 </head>
 <body>
 <h1>기간제교원 근무 평가서(평가위원용)</h1>
@@ -2726,6 +2725,7 @@ function printEvalData(teacher, ev, data, rec, signature) {
   const win = window.open('', '_blank', 'width=800,height=900');
   win.document.write(html);
   win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 // ==================== EXCEL EXPORT ====================
