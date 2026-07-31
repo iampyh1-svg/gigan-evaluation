@@ -757,7 +757,7 @@
           <div class="spacer"></div>
           <button class="btn btn-success" onclick="exportExcel()">📥 엑셀 내보내기</button>
         </div>
-        <div class="scroll-x" id="summaryTableWrap"></div>
+        <div id="summaryTableWrap"></div>
       </div>
     </div>
 
@@ -1822,7 +1822,7 @@ function renderSummaryTable(data) {
   }
 
   const criteriaHeaders = CRITERIA.map((c, i) =>
-    `<th>항목${i+1}<br><span style="font-weight:400;font-size:10px">${c}</span></th>`
+    `<th style="min-width:44px">항목${i+1}</th>`
   ).join('');
 
   const rows = teachers.map(t => {
