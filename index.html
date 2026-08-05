@@ -2222,11 +2222,12 @@ async function saveRecommendation(submit) {
 
 function renderRecommendTable(data) {
   const wrap = document.getElementById('recommendTableWrap');
-  if (!data.recommendations.length) {
+  const list = data.recommendations.filter(r => r.teacherName && r.teacherName !== 'null' && r.teacherName !== 'undefined');
+  if (!list.length) {
     wrap.innerHTML = '<div class="empty-state"><div class="icon">📄</div><p>제출된 추천서가 없습니다.</p></div>';
     return;
   }
-  const rows = data.recommendations.map(r => {
+  const rows = list.map(r => {
     const dt = new Date(r.timestamp).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     const statusBadge = r.submitted
       ? '<span class="grade-badge gb-우수">제출완료</span>'
@@ -2263,13 +2264,18 @@ async function cancelRecommendationSubmit(teacherId, teacherName) {
 }
 
 async function deleteRecommendation(teacherId, teacherName) {
-  if (!confirm(`"${teacherName || 'null'}" 추천서를 삭제하시겠습니까?`)) return;
+  const label = (teacherName && teacherName !== 'null' && teacherName !== 'undefined') ? teacherName : '이름 없음';
+  if (!confirm(`"${label}" 추천서를 삭제하시겠습니까?`)) return;
   const isNull = !teacherId || teacherId === 'null' || teacherId === 'undefined';
   const query = isNull
-    ? sb.from('recommendations').delete().is('teacher_id', null)
-    : sb.from('recommendations').delete().eq('teacher_id', teacherId);
-  const { error } = await query;
+    ? sb.from('recommendations').delete().is('teacher_id', null).select()
+    : sb.from('recommendations').delete().eq('teacher_id', teacherId).select();
+  const { data, error } = await query;
   if (error) { alert('삭제 실패: ' + error.message); return; }
+  if (!data || data.length === 0) {
+    alert('삭제되지 않았습니다. 권한(RLS) 문제로 서버가 삭제를 거부했을 수 있습니다.\nSupabase의 recommendations 테이블 DELETE 정책을 확인해주세요.');
+    return;
+  }
   await refreshRecommendations();
   renderRecommendTable(loadData());
 }
