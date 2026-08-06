@@ -654,21 +654,6 @@
       </div>
 
       <div class="divider"></div>
-      <div id="rec_review_section" style="display:none">
-      <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--primary)">인사위원회 심사</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
-        <div class="form-group">
-          <label>심사 여부</label>
-          <select id="rec_review">
-            <option value="">선택</option>
-            <option value="O">O (통과)</option>
-            <option value="X">X (미통과)</option>
-          </select>
-        </div>
-      </div>
-      </div><!-- /rec_review_section -->
-
-      <div class="divider"></div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--primary)">기간제교원 경력 <span style="font-size:12px;font-weight:400;color:var(--muted)">(최대 3곳, 기간제교원 경력만)</span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">추천학교 포함한 최근 근무교 순서로 작성</div>
       <div style="border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
@@ -728,7 +713,6 @@
         <button id="rec_reset_btn" class="btn btn-secondary" style="flex:1" onclick="loadRecommendation()">초기화</button>
         <button id="rec_draft_btn" class="btn btn-secondary" style="flex:2" onclick="saveRecommendation(false)">💾 임시 저장</button>
         <button id="rec_submit_btn" class="btn btn-primary" style="flex:2" onclick="saveRecommendation(true)">✅ 제출</button>
-        <button id="rec_print_btn" class="btn" style="flex:2;background:#6c757d;color:white;display:none" onclick="printRecommendation()">🖨 출력</button>
       </div>
     </div>
   </div>
@@ -974,6 +958,10 @@ function getTotalGrade(total) {
   return '-';
 }
 
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function parseDotDate(str) {
   if (!str) return '';
   const m = /^(\d{4})\.(\d{2})\.(\d{2})\.?$/.exec(str);
@@ -1102,11 +1090,11 @@ async function refreshEvals() {
     return {
       id: e.id,
       evaluatorId: e.evaluator_id,
-      evaluatorName: evaluator ? evaluator.name : '',
-      evaluatorRole: evaluator ? evaluator.committee_role : '',
+      evaluatorName: evaluator?.name || '',
+      evaluatorRole: evaluator?.committee_role || '',
       teacherId: e.teacher_id,
-      teacherName: teacher ? teacher.name : '',
-      teacherSubject: teacher ? (teacher.subject || '') : '',
+      teacherName: teacher?.name || '',
+      teacherSubject: teacher?.subject || '',
       scores: e.scores,
       total: e.total,
       grade: e.grade,
@@ -1122,7 +1110,7 @@ async function refreshRecommendations() {
     const teacher = appData._profileById?.[r.teacher_id];
     return {
       teacherId: r.teacher_id,
-      teacherName: teacher ? teacher.name : '',
+      teacherName: teacher?.name || '',
       gender: r.gender, birth: r.birth, contract: r.contract, address: r.address, phone: r.phone,
       subject: r.subject, cert: r.cert, expY: r.exp_y, expM: r.exp_m, review: r.review,
       docnum: r.docnum, special: r.special, submitted: !!r.submitted,
@@ -1191,6 +1179,8 @@ async function restoreSession() {
     document.getElementById('changePwBtn').style.display = 'inline-block';
     document.getElementById('signBtn').style.display = 'inline-block';
     goSelectTeacher();
+  } else {
+    await sb.auth.signOut();
   }
 }
 
@@ -1270,6 +1260,11 @@ function handleSignatureUpload(event) {
     document.getElementById('signModalError').style.display = 'block';
     return;
   }
+  if (file.size > 2 * 1024 * 1024) {
+    document.getElementById('signModalError').textContent = '이미지 용량은 2MB 이하로 업로드해주세요.';
+    document.getElementById('signModalError').style.display = 'block';
+    return;
+  }
   document.getElementById('signModalError').style.display = 'none';
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -1324,7 +1319,8 @@ async function deleteSignature() {
 
 // ==================== 비밀번호 변경 모달 ====================
 function openChangePwModal() {
-  document.getElementById('modalUserName').textContent = currentUser + ' 위원';
+  const userName = currentUserType === 'teacher' ? (currentTeacherObj?.name || currentUser) + ' 선생님' : currentUser + ' 위원';
+  document.getElementById('modalUserName').textContent = userName;
   document.getElementById('modalCurPw').value = '';
   document.getElementById('modalNewPw1').value = '';
   document.getElementById('modalNewPw2').value = '';
@@ -1493,7 +1489,7 @@ function renderTeacherList() {
       : '';
     return `<div class="teacher-item" onclick="selectTeacher('${t.id}')">
       <div>
-        <div class="name">${t.name}</div>
+        <div class="name">${escapeHtml(t.name)}</div>
         <div class="subject">${t.subject || ''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -1554,7 +1550,7 @@ function renderEvalForm() {
 }
 
 function setGrade(idx, min, max) {
-  // Set to midpoint of range, but keep existing if in range, else set to max
+  // 이미 해당 등급 구간 안의 점수면 유지하고, 아니면 그 구간의 최댓값을 부여한다
   if (scores[idx] >= min && scores[idx] <= max) return;
   scores[idx] = max;
   refreshScoreUI(idx);
@@ -1664,7 +1660,7 @@ function renderEvalresultTable(data) {
     const btn = evalsForTeacher.length > 0
       ? `<button class="btn-print-small" onclick="printEvalResult('${t.id}')">🖨 결과 출력</button>`
       : '-';
-    return `<tr><td class="td-name">${t.name}</td><td>${subject}</td><td>${status}</td><td>${btn}</td></tr>`;
+    return `<tr><td class="td-name">${escapeHtml(t.name)}</td><td>${subject}</td><td>${status}</td><td>${btn}</td></tr>`;
   }).join('');
   wrap.innerHTML = `<table>
     <thead><tr><th>교사명</th><th>담당과목</th><th>평가 현황</th><th>출력</th></tr></thead>
@@ -1687,7 +1683,8 @@ async function printEvalResult(teacherId) {
     const sum = teacherEvals.reduce((a, e) => a + (e.scores[ci] || 0), 0);
     return Math.round((sum / teacherEvals.length) * 100) / 100;
   });
-  const avgTotal = Math.round(avgScores.reduce((a, b) => a + b, 0) * 100) / 100;
+  // 관리자 요약표(renderSummaryTable)와 동일하게 원점수 총점의 평균으로 계산 (항목별 반올림값 합산과 어긋나지 않도록)
+  const avgTotal = Math.round((teacherEvals.reduce((a, e) => a + e.total, 0) / teacherEvals.length) * 100) / 100;
 
   // 6-컬럼 단일 표: col1(순/라벨) | col2(요소명/학교명값) | col3(세부항목) | col4(성명라벨) | col5(성명값) | col6(성별+평가결과)
   const criteriaRows = CRITERIA.map((name, ci) => {
@@ -1793,7 +1790,7 @@ function renderStats(data) {
   const teachers = data.teachers;
   const evals = data.evals;
   const evaluators = [...new Set(evals.map(e => e.evaluatorName))];
-  const totalPossible = teachers.length * evaluators.length;
+  const totalPossible = teachers.length * data.evaluators.length;
   const pct = totalPossible > 0 ? Math.round(evals.length / totalPossible * 100) : 0;
 
   document.getElementById('statsGrid').innerHTML = `
@@ -1836,7 +1833,7 @@ function renderSummaryTable(data) {
     const subject = t.subject || rec?.subject || '-';
     if (teacherEvals.length === 0) {
       return `<tr>
-        <td class="td-name">${t.name}</td>
+        <td class="td-name">${escapeHtml(t.name)}</td>
         <td>${subject}</td>
         <td>0</td>
         ${CRITERIA.map(() => '<td>-</td>').join('')}
@@ -1852,7 +1849,7 @@ function renderSummaryTable(data) {
     const avgTotal = (teacherEvals.reduce((a, e) => a + e.total, 0) / teacherEvals.length).toFixed(1);
     const grade = getTotalGrade(Math.round(parseFloat(avgTotal)));
     return `<tr>
-      <td class="td-name">${t.name}</td>
+      <td class="td-name">${escapeHtml(t.name)}</td>
       <td>${subject}</td>
       <td>${teacherEvals.length}명</td>
       ${avgScores.map(s => `<td>${s}</td>`).join('')}
@@ -1908,9 +1905,9 @@ function renderDetailTable() {
     const dt = new Date(e.timestamp).toLocaleString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
     return `<tr>
       <td>${dt}</td>
-      <td class="td-name">${e.teacherName}</td>
+      <td class="td-name">${escapeHtml(e.teacherName)}</td>
       <td>${e.teacherSubject || '-'}</td>
-      <td>${e.evaluatorName}</td>
+      <td>${escapeHtml(e.evaluatorName)}</td>
       ${e.scores.map(s => `<td>${s}</td>`).join('')}
       <td class="td-avg">${e.total}</td>
       <td><span class="grade-badge gb-${e.grade}">${e.grade}</span></td>
@@ -1944,7 +1941,7 @@ function renderTeacherMgmt(data) {
   }
   el.innerHTML = data.teachers.map(t => `
     <div class="teacher-row">
-      <input type="text" value="${t.name}" class="sub-input" onchange="updateTeacher('${t.id}', 'name', this.value)" placeholder="이름">
+      <input type="text" value="${escapeHtml(t.name)}" class="sub-input" onchange="updateTeacher('${t.id}', 'name', this.value)" placeholder="이름">
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap">
         <input type="checkbox" ${t.isShortTerm ? 'checked' : ''} onchange="updateTeacher('${t.id}', 'is_short_term', this.checked)"> 단기 계약
       </label>
@@ -1957,6 +1954,7 @@ async function addTeacher() {
   const name = document.getElementById('newTeacherName').value.trim();
   const isShortTerm = document.getElementById('newTeacherShortTerm').checked;
   if (!name) { alert('교사 이름을 입력하세요.'); return; }
+  if (appData.teachers.find(t => t.name === name)) { alert('이미 등록된 이름입니다. 동명이인은 별도로 구분할 수 없으니 다른 표기로 등록해주세요.'); return; }
   const { data, error } = await sb.functions.invoke('admin-create-user', {
     body: { name, role: 'teacher', is_short_term: isShortTerm },
   });
@@ -1991,7 +1989,7 @@ function renderEvaluatorMgmt(data) {
   }
   el.innerHTML = data.evaluators.map(ev => `
     <div class="teacher-row">
-      <input type="text" value="${ev.name}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'name', this.value)" placeholder="이름">
+      <input type="text" value="${escapeHtml(ev.name)}" class="sub-input" onchange="updateEvaluator('${ev.id}', 'name', this.value)" placeholder="이름">
       <button class="btn-icon" onclick="removeEvaluator('${ev.id}')" title="배정 해제">🗑</button>
     </div>
   `).join('');
@@ -2013,7 +2011,7 @@ function renderEvaluatorPwList(data) {
   }
   el.innerHTML = data.evaluators.map(ev => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div style="min-width:90px;font-weight:600;font-size:14px">${ev.name}${ev.role ? ' <span style="font-size:12px;color:var(--muted);font-weight:400">('+ev.role+')</span>' : ''}</div>
+      <div style="min-width:90px;font-weight:600;font-size:14px">${escapeHtml(ev.name)}${ev.role ? ' <span style="font-size:12px;color:var(--muted);font-weight:400">('+escapeHtml(ev.role)+')</span>' : ''}</div>
       <input type="password" id="evpw_${ev.id}" placeholder="새 비밀번호 (다른 위원과 겹치지 않게)" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setEvaluatorPw('${ev.id}')">
       <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setEvaluatorPw('${ev.id}')">변경</button>
     </div>
@@ -2033,6 +2031,7 @@ async function setEvaluatorPw(id) {
   const input = document.getElementById('evpw_' + id);
   const newPw = input.value.trim();
   if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
+  if (newPw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
   const ev = appData.evaluators.find(e => e.id === id);
   if (!ev) return;
   const { data: dup } = await sb.rpc('find_login_by_password', { pw: newPw, target_role: 'evaluator' });
@@ -2101,7 +2100,7 @@ function renderTeacherPwList(data) {
   if (!data.teachers.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">등록된 교사가 없습니다.</div>'; return; }
   el.innerHTML = data.teachers.map(t => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div style="min-width:90px;font-weight:600;font-size:14px">${t.name}${t.subject?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t.subject})</span>`:''}</div>
+      <div style="min-width:90px;font-weight:600;font-size:14px">${escapeHtml(t.name)}${t.subject?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${escapeHtml(t.subject)})</span>`:''}</div>
       <input type="password" id="tpw_${t.id}" placeholder="새 비밀번호" style="flex:1;min-width:140px;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')setTeacherPw('${t.id}')">
       <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="setTeacherPw('${t.id}')">변경</button>
       <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px" onclick="resetTeacherPw('${t.id}')">초기화</button>
@@ -2112,6 +2111,7 @@ async function setTeacherPw(id) {
   const input = document.getElementById('tpw_' + id);
   const newPw = input.value.trim();
   if (!newPw) { alert('새 비밀번호를 입력하세요.'); return; }
+  if (newPw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
   const t = appData.teachers.find(t => t.id === id);
   if (!t) return;
   try {
@@ -2137,8 +2137,8 @@ async function resetTeacherPw(id) {
 // ==================== 추천서 작성 ====================
 function loadRecommendation() {
   const data = loadData();
-  const teacher = data.teachers.find(t => t.name === currentUser);
-  const rec = data.recommendations.find(r => r.teacherName === currentUser) || {};
+  const teacher = currentTeacherObj;
+  const rec = (currentTeacherObj && data.recommendations.find(r => r.teacherId === currentTeacherObj.id)) || {};
 
   document.getElementById('rec_name').value = currentUser;
   document.getElementById('rec_gender').value = rec.gender || '';
@@ -2161,11 +2161,6 @@ function loadRecommendation() {
   document.getElementById('rec_cert').value = rec.cert || '';
   document.getElementById('rec_exp_y').value = rec.expY || '';
   document.getElementById('rec_exp_m').value = rec.expM || '';
-  document.getElementById('rec_review').value = rec.review || '';
-  // 관리자만 심사 항목·출력 버튼 표시
-  const adminOnly = isAdmin;
-  document.getElementById('rec_review_section').style.display = adminOnly ? 'block' : 'none';
-  document.getElementById('rec_print_btn').style.display     = adminOnly ? 'inline-block' : 'none';
   if (rec.special) {
     const radio = document.querySelector(`input[name="rec_special"][value="${rec.special}"]`);
     if (radio) radio.checked = true;
@@ -2204,7 +2199,7 @@ async function saveRecommendation(submit) {
     cert: document.getElementById('rec_cert').value,
     exp_y: document.getElementById('rec_exp_y').value,
     exp_m: document.getElementById('rec_exp_m').value,
-    review: document.getElementById('rec_review').value,    special: special ? special.value : '',
+    special: special ? special.value : '',
     career1: { school: document.getElementById('rec_school1').value, from: formatBirth(document.getElementById('rec_from1').value), to: formatBirth(document.getElementById('rec_to1').value) },
     career2: { school: document.getElementById('rec_school2').value, from: formatBirth(document.getElementById('rec_from2').value), to: formatBirth(document.getElementById('rec_to2').value) },
     career3: { school: document.getElementById('rec_school3').value, from: formatBirth(document.getElementById('rec_from3').value), to: formatBirth(document.getElementById('rec_to3').value) },
@@ -2233,37 +2228,42 @@ function renderRecommendTable(data) {
       ? '<span class="grade-badge gb-우수">제출완료</span>'
       : '<span class="grade-badge gb-미흡">임시저장</span>';
     const cancelBtn = r.submitted
-      ? `<button class="btn-print-small" style="background:var(--accent)" onclick="cancelRecommendationSubmit('${r.teacherId}', '${r.teacherName}')">제출 취소</button>`
+      ? `<button class="btn-print-small" style="background:var(--accent)" onclick="cancelRecommendationSubmit('${r.teacherId}')">제출 취소</button>`
       : '';
     return `<tr>
-      <td class="td-name">${r.teacherName}</td>
+      <td class="td-name">${escapeHtml(r.teacherName)}</td>
       <td>${r.subject || '-'}</td>
       <td>${statusBadge}</td>
-      <td>${r.review || '-'}</td>
       <td>${dt}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherName}')">🖨 출력</button>
+        <button class="btn-print-small" onclick="printRecommendAdmin('${r.teacherId}')">🖨 출력</button>
         ${cancelBtn}
-        <button class="btn-print-small" style="background:#888" onclick="deleteRecommendation('${r.teacherId}', '${r.teacherName}')">🗑 삭제</button>
+        <button class="btn-print-small" style="background:#888" onclick="deleteRecommendation('${r.teacherId}')">🗑 삭제</button>
       </td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table>
-    <thead><tr><th>교사명</th><th>임용과목</th><th>상태</th><th>심사여부</th><th>작성일시</th><th>출력</th></tr></thead>
+    <thead><tr><th>교사명</th><th>임용과목</th><th>상태</th><th>작성일시</th><th>출력</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
 
-async function cancelRecommendationSubmit(teacherId, teacherName) {
+async function cancelRecommendationSubmit(teacherId) {
+  const teacherName = appData.recommendations.find(r => r.teacherId === teacherId)?.teacherName || '이름 없음';
   if (!confirm(`${teacherName} 선생님의 제출을 취소하고 다시 수정할 수 있게 하시겠습니까?`)) return;
-  const { error } = await sb.from('recommendations').update({ submitted: false }).eq('teacher_id', teacherId);
+  const { data, error } = await sb.from('recommendations').update({ submitted: false }).eq('teacher_id', teacherId).select();
   if (error) { alert('취소 실패: ' + error.message); return; }
+  if (!data || data.length === 0) {
+    alert('취소되지 않았습니다. 권한(RLS) 문제로 서버가 변경을 거부했을 수 있습니다.\nSupabase의 recommendations 테이블 UPDATE 정책을 확인해주세요.');
+    return;
+  }
   await refreshRecommendations();
   renderRecommendTable(loadData());
   alert('제출이 취소되었습니다. 이제 본인이 다시 수정할 수 있습니다.');
 }
 
-async function deleteRecommendation(teacherId, teacherName) {
+async function deleteRecommendation(teacherId) {
+  const teacherName = appData.recommendations.find(r => r.teacherId === teacherId)?.teacherName;
   const label = (teacherName && teacherName !== 'null' && teacherName !== 'undefined') ? teacherName : '이름 없음';
   if (!confirm(`"${label}" 추천서를 삭제하시겠습니까?`)) return;
   const isNull = !teacherId || teacherId === 'null' || teacherId === 'undefined';
@@ -2280,32 +2280,10 @@ async function deleteRecommendation(teacherId, teacherName) {
   renderRecommendTable(loadData());
 }
 
-function printRecommendAdmin(teacherName) {
+function printRecommendAdmin(teacherId) {
   const data = loadData();
-  const rec = data.recommendations.find(r => r.teacherName === teacherName);
+  const rec = data.recommendations.find(r => r.teacherId === teacherId);
   if (!rec) { alert('추천서 데이터가 없습니다.'); return; }
-  openRecommendPrint(rec, data);
-}
-
-function printRecommendation() {
-  const data = loadData();
-  const special = document.querySelector('input[name="rec_special"]:checked');
-  const rec = {
-    teacherName: currentUser,
-    gender: document.getElementById('rec_gender').value,
-    birth: document.getElementById('rec_birth').value,
-    contract: buildContractValue(),
-    address: document.getElementById('rec_address').value,
-    phone: document.getElementById('rec_phone').value,
-    subject: document.getElementById('rec_subject').value,
-    cert: document.getElementById('rec_cert').value,
-    expY: document.getElementById('rec_exp_y').value,
-    expM: document.getElementById('rec_exp_m').value,
-    review: document.getElementById('rec_review').value,    special: special ? special.value : '',
-    career1: { school: document.getElementById('rec_school1').value, from: formatBirth(document.getElementById('rec_from1').value), to: formatBirth(document.getElementById('rec_to1').value) },
-    career2: { school: document.getElementById('rec_school2').value, from: formatBirth(document.getElementById('rec_from2').value), to: formatBirth(document.getElementById('rec_to2').value) },
-    career3: { school: document.getElementById('rec_school3').value, from: formatBirth(document.getElementById('rec_from3').value), to: formatBirth(document.getElementById('rec_to3').value) },
-  };
   openRecommendPrint(rec, data);
 }
 
@@ -2498,19 +2476,25 @@ async function migrateLocalData() {
     showMsg(msg, 'error', '이 기기에 이전할 예전 데이터가 없습니다.');
     return;
   }
-  if (!confirm('이 기기에 저장된 기존 데이터를 Supabase로 업로드하시겠습니까?')) return;
+  const existingEvalCount = appData.evals.length;
+  const existingRecCount = appData.recommendations.length;
+  const conflictWarning = (existingEvalCount || existingRecCount)
+    ? `\n\n⚠️ 현재 Supabase에 이미 평가 ${existingEvalCount}건, 추천서 ${existingRecCount}건이 등록되어 있습니다. 같은 교사/위원 조합이 있으면 이 기기의 예전 데이터로 덮어씌워집니다.`
+    : '';
+  if (!confirm(`이 기기에 저장된 기존 데이터를 Supabase로 업로드하시겠습니까?${conflictWarning}`)) return;
 
   const findId = (name, role) => {
     const p = Object.values(appData._profileById || {}).find(x => x.name === name && x.role === role);
     return p ? p.id : null;
   };
 
-  let evalOk = 0, evalSkip = 0, recOk = 0, recSkip = 0;
+  let evalOk = 0, evalSkip = 0, evalConflict = 0, recOk = 0, recSkip = 0, recConflict = 0;
 
   for (const e of oldEvals) {
     const evaluatorId = findId(e.evaluatorName, 'evaluator');
     const teacherId = findId(e.teacherName, 'teacher');
     if (!evaluatorId || !teacherId) { evalSkip++; continue; }
+    if (appData.evals.find(ev => ev.evaluatorId === evaluatorId && ev.teacherId === teacherId)) { evalConflict++; continue; }
     const { error } = await sb.from('evals').upsert({
       evaluator_id: evaluatorId,
       teacher_id: teacherId,
@@ -2524,10 +2508,11 @@ async function migrateLocalData() {
   for (const r of oldRecs) {
     const teacherId = findId(r.teacherName, 'teacher');
     if (!teacherId) { recSkip++; continue; }
+    if (appData.recommendations.find(rec => rec.teacherId === teacherId)) { recConflict++; continue; }
     const { error } = await sb.from('recommendations').upsert({
       teacher_id: teacherId,
       gender: r.gender, birth: r.birth, contract: r.contract, address: r.address, phone: r.phone,
-      subject: r.subject, cert: r.cert, exp_y: r.expY, exp_m: r.expM, review: r.review,
+      subject: r.subject, cert: r.cert, exp_y: r.expY, exp_m: r.expM,
       docnum: r.docnum, special: r.special,
       career1: r.career1 || {}, career2: r.career2 || {}, career3: r.career3 || {},
     }, { onConflict: 'teacher_id' });
@@ -2537,7 +2522,7 @@ async function migrateLocalData() {
   await refreshAll();
   renderAdmin();
   showMsg(msg, 'success',
-    `평가 ${evalOk}건 이전 완료(건너뜀 ${evalSkip}건), 추천서 ${recOk}건 이전 완료(건너뜀 ${recSkip}건). ` +
+    `평가 ${evalOk}건 이전 완료(건너뜀 ${evalSkip}건, 이미 존재해 건너뜀 ${evalConflict}건), 추천서 ${recOk}건 이전 완료(건너뜀 ${recSkip}건, 이미 존재해 건너뜀 ${recConflict}건). ` +
     `건너뛴 항목은 이름이 아직 배정되지 않은 경우이니, "명단 관리"에서 배정 후 다시 시도하세요.`);
 }
 
@@ -2635,7 +2620,7 @@ async function printResult(teacherId) {
 </table>
 <div class="legend">※ 매우우수: 17-20점, 우수: 13-16점, 보통: 9-12점, 미흡: 5-8점, 매우미흡: 1-4점</div>
 <div class="sign-row" style="display:flex;align-items:center;gap:16px">
-  <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${evalRole} &nbsp;&nbsp; 성명: ${ev.evaluatorName}</span>
+  <span>평가위원 &nbsp;&nbsp; 소속: 전주기전여자고등학교 &nbsp;&nbsp; 직: ${escapeHtml(evalRole)} &nbsp;&nbsp; 성명: ${escapeHtml(ev.evaluatorName)}</span>
   ${sig ? `<img src="${sig}" alt="서명" style="height:44px;max-width:110px;object-fit:contain;vertical-align:middle">` :
           `<span style="font-size:9.5pt">(서명)</span>`}
 </div>
@@ -2898,7 +2883,7 @@ function printEvalData(teacher, ev, data, rec, signature) {
 // ==================== EXCEL EXPORT ====================
 function exportExcel() {
   const data = loadData();
-  const year = data.evalYear || '2025';
+  const year = data.evalYear || '2026';
   const wb = XLSX.utils.book_new();
 
   // Sheet 1: Summary
@@ -2925,7 +2910,7 @@ function exportExcel() {
 
   const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
   ws1['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 8 }, ...CRITERIA.map(() => ({ wch: 12 })), { wch: 10 }, { wch: 10 }];
-  ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
+  ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }];
   XLSX.utils.book_append_sheet(wb, ws1, '집계표');
 
   // Sheet 2: Detail
@@ -2945,9 +2930,9 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, ws2, '상세내역');
 
   // Sheet 3: Per-evaluator
-  const evNames = [...new Set(data.evals.map(e => e.evaluatorName))];
+  const evNames = [...new Set(data.evals.map(e => e.evaluatorName || '이름없음'))];
   evNames.forEach(ev => {
-    const evEvals = data.evals.filter(e => e.evaluatorName === ev);
+    const evEvals = data.evals.filter(e => (e.evaluatorName || '이름없음') === ev);
     const rows = [
       [`평가위원: ${ev}`],
       [],
@@ -2964,7 +2949,7 @@ function exportExcel() {
 
 function exportExcelDetail() {
   const data = loadData();
-  const year = data.evalYear || '2025';
+  const year = data.evalYear || '2026';
   const wb = XLSX.utils.book_new();
 
   const ft = document.getElementById('filterTeacher').value;
